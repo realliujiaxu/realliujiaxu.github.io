@@ -11,10 +11,6 @@ title = "刘家旭的博客"
 # 更改使用 Hugo 构建网站时使用的默认主题
 theme = "LoveIt"
 
-[params]
-  # LoveIt 主题版本
-  version = "0.2.X"
-
 [menu]
   [[menu.main]]
     identifier = "posts"
@@ -52,6 +48,9 @@ theme = "LoveIt"
     noClasses = false
 
 # LoveIt 更改 | 0.2.0 文章页面配置
+[params]
+  # LoveIt 主题版本
+  version = "0.2.X"
   [params.page]
     # LoveIt 新增 | 0.2.0 是否在主页隐藏一篇文章
     hiddenFromHomePage = false
