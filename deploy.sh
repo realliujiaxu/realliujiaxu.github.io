@@ -7,7 +7,7 @@ git commit -m "update files"
 
 /usr/bin/expect <<-EOF
 spawn git push
-expect{
+expect {
 "name" {send "realliujiaxu\r"; exp_continue}
 
 "password" {send "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\r"}
