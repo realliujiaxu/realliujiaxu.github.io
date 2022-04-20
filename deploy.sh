@@ -10,7 +10,7 @@ spawn git push
 expect {
 "Username" {send "realliujiaxu\r"; exp_continue}
 
-"Password" {send "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\r"}
+"Password" {send "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\r"}
 }
 expect eof
 EOF
