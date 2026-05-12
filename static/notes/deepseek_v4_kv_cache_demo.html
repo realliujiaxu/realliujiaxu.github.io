@@ -238,6 +238,217 @@
   .bar-label { font-size: 12px; color: var(--fg-2); }
   .bar-value { font-size: 12.5px; font-weight: 600; }
 
+  .pipeline-chain {
+    display: flex; align-items: stretch; flex-wrap: wrap; gap: 8px;
+    padding: 14px 0 6px;
+  }
+  .pipeline-node {
+    flex: 1 1 130px;
+    min-width: 130px;
+    background: var(--bg-card);
+    border: 1px solid var(--stroke-3);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .pipeline-value { font-size: 16px; font-weight: 600; color: var(--fg); }
+  .pipeline-label { font-size: 12.5px; color: var(--fg-2); }
+  .pipeline-note { font-size: 11.5px; color: var(--fg-3); margin-top: 2px; }
+  .pipeline-arrow {
+    align-self: center;
+    color: var(--fg-3);
+    font-size: 18px;
+    user-select: none;
+  }
+
+  .bar-notes {
+    display: flex; flex-direction: column; gap: 6px;
+    margin-top: 10px;
+  }
+  .bar-note-row {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 12px;
+    align-items: baseline;
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--stroke-3);
+  }
+  .bar-note-row:last-child { border-bottom: 0; }
+  .bar-note-label { font-size: 13px; font-weight: 600; color: var(--fg); }
+  .bar-note-text { font-size: 13px; color: var(--fg-2); }
+
+  /* 包住空槽位网格的 card 默认 overflow:hidden 会剪掉 tooltip，这里放开 */
+  .grid-card,
+  .grid-card-body {
+    overflow: visible;
+  }
+  .grid-wrap { min-width: 640px; }
+  .grid-axis-top {
+    font-size: 11.5px;
+    color: var(--fg-3);
+    text-align: center;
+    margin-bottom: 4px;
+    padding-left: 78px;
+  }
+  .grid-header-row,
+  .grid-row {
+    display: grid;
+    grid-template-columns: 78px repeat(22, minmax(0, 1fr));
+    gap: 3px;
+    align-items: end;
+  }
+  .grid-row { align-items: center; margin-top: 3px; }
+  .grid-corner {
+    font-size: 11px;
+    color: var(--fg-3);
+    text-align: right;
+    padding-right: 6px;
+    font-weight: 500;
+  }
+  .grid-axis-col {
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--fg-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .grid-row-label {
+    text-align: right;
+    font-size: 12px;
+    color: var(--fg-2);
+    padding-right: 6px;
+  }
+
+  .grid-cell {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    cursor: default;
+  }
+  .grid-cell.tone-empty {
+    background: rgba(213, 101, 101, 0.65);
+    border: 1px solid var(--danger);
+    color: #fff;
+    font-weight: 600;
+  }
+  .grid-cell.tone-one {
+    background: var(--bg-elev);
+    border: 1px solid var(--stroke-3);
+    color: var(--fg-3);
+  }
+  .grid-cell.tone-two {
+    background: rgba(89, 156, 231, 0.35);
+    border: 1px solid var(--info);
+    color: var(--fg);
+  }
+  .grid-cell.tone-many {
+    background: rgba(95, 184, 138, 0.45);
+    border: 1px solid var(--success);
+    color: var(--fg);
+  }
+  .grid-cell:hover {
+    outline: 2px solid var(--info);
+    outline-offset: 1px;
+    z-index: 5;
+  }
+  .grid-cell .cell-tip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 220px;
+    max-width: 320px;
+    padding: 8px 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--stroke-1);
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    color: var(--fg);
+    font-size: 11.5px;
+    text-align: left;
+    z-index: 20;
+    pointer-events: none;
+    display: none;
+    white-space: normal;
+  }
+  .grid-cell:hover .cell-tip { display: block; }
+  /* 第一行（最大 page）tooltip 朝下，避免被遮挡 */
+  .grid-row:first-of-type .grid-cell .cell-tip {
+    bottom: auto;
+    top: calc(100% + 8px);
+  }
+  /* 靠左/靠右的 cell tooltip 左右对齐，避免溢出 */
+  .grid-row .grid-cell:nth-child(-n+4) .cell-tip {
+    left: 0;
+    transform: none;
+  }
+  .grid-row .grid-cell:nth-last-child(-n+4) .cell-tip {
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+  .cell-tip .tip-head {
+    color: var(--fg-3);
+    font-size: 11px;
+    margin-bottom: 4px;
+    border-bottom: 1px dashed var(--stroke-3);
+    padding-bottom: 4px;
+  }
+  .cell-tip .tip-list {
+    margin: 0;
+    padding-left: 16px;
+    list-style: disc;
+  }
+  .cell-tip .tip-list li {
+    margin: 2px 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .cell-tip .tip-empty {
+    color: var(--danger);
+    font-style: italic;
+  }
+  .cell-num { user-select: none; }
+
+  .grid-legend {
+    margin-top: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .grid-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--fg-2);
+  }
+  .grid-legend-swatch {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+  }
+  .grid-legend-swatch.tone-danger {
+    background: rgba(213, 101, 101, 0.65);
+    border: 1px solid var(--danger);
+  }
+  .grid-legend-swatch.tone-neutral {
+    background: var(--bg-elev);
+    border: 1px solid var(--stroke-3);
+  }
+  .grid-legend-swatch.tone-info {
+    background: rgba(89, 156, 231, 0.35);
+    border: 1px solid var(--info);
+  }
+  .grid-legend-swatch.tone-success {
+    background: rgba(95, 184, 138, 0.45);
+    border: 1px solid var(--success);
+  }
+
   .bottom-nav {
     display: flex; align-items: center; justify-content: space-between;
     margin-top: 20px;
@@ -285,7 +496,7 @@
 
 <script>
 // 由 /tmp/trace_deepseek_v4_kv_cache.py 实际运行产线代码验证，逐字节一致
-const DEMO = {"meta":{"page_title":"Deepseek-V4 KV Cache Layout流程演示","eyebrow":"vllm/v1/core/kv_cache_utils.py · DeepSeek-V4-Flash","h1":"Deepseek-V4 KV Cache Layout流程演示","subtitle_html":"分步演示 DeepSeek-V4 的 KV cache 分组流程：168 个原始\n<code>KVCacheSpec\u003c/code> 条目如何经过分桶、对齐与切分，最终归并成\n3 种 page size、5 个 <code>KVCacheGroupSpec\u003c/code> 的物理布局。\n点击上方任一步骤即可跳转。\n<br/><span class=\"muted\">引用代码来自 vLLM <code>v0.20.2\u003c/code>。\u003c/span>\n"},"nav":{"prev":"← 上一步","next":"下一步 →"},"data_note":"由 /tmp/trace_deepseek_v4_kv_cache.py 实际运行产线代码验证，逐字节一致","steps":[{"id":0,"title":"High Level Idea","subtitle":"三类 Attention · 三种 page size · 五个 group"},{"id":1,"title":"准备","subtitle":"168 个 KVCacheSpec 原始条目"},{"id":2,"title":"按 spec 类型分桶","subtitle":"Full Attention 单桶 + SWA 按 (block, sw) 多桶"},{"id":3,"title":"Uniform 封装","subtitle":"from_specs → 4 个 UniformTypeKVCacheSpecs · group[0] 必为 full-MLA"},{"id":4,"title":"Group 层数对齐","subtitle":"对齐 num_layer_tuples + page padding"},{"id":5,"title":"物理 tensor 分配","subtitle":"KVCacheTensor 描述 · worker 端 torch.zeros"},{"id":6,"title":"最终结果","subtitle":"3 种 page size · 5 个 KVCacheGroupSpec"}],"input_specs":[{"kind":"MLA","block":256,"sw":null,"head":132,"pageBytes":8640,"cr":4,"layers":21,"label":"C4 Indexer K cache（C4I）","source":"DeepseekV4IndexerCache"},{"kind":"MLA","block":256,"sw":null,"head":512,"pageBytes":37440,"cr":4,"layers":21,"label":"C4 主 MLA（C4A）","source":"DeepseekV4MLAAttention"},{"kind":"MLA","block":256,"sw":null,"head":512,"pageBytes":1728,"cr":128,"layers":20,"label":"C128 主 MLA（C128A）","source":"DeepseekV4MLAAttention"},{"kind":"SWA","block":64,"sw":128,"head":512,"pageBytes":37440,"cr":1,"layers":44,"label":"SWA 缓存（每层都有）","source":"DeepseekV4SWACache"},{"kind":"SWA","block":4,"sw":8,"head":2048,"pageBytes":32832,"cr":1,"layers":21,"label":"C4 主 MLA 的 compressor 状态","source":"DeepseekCompressor.state_cache"},{"kind":"SWA","block":4,"sw":8,"head":512,"pageBytes":8640,"cr":1,"layers":21,"label":"C4 Indexer 内的 compressor 状态","source":"DeepseekCompressor.state_cache"},{"kind":"SWA","block":8,"sw":128,"head":1024,"pageBytes":32832,"cr":1,"layers":20,"label":"C128 主 MLA 的 compressor 状态","source":"DeepseekCompressor.state_cache"}],"total_layers":44,"groups_after":[{"idx":0,"role":"FULL_MLA","layers":62,"blocks":[256],"sws":[null],"crs":[4,128],"pageSizes":[1728,8640,37440],"contents":"21 C4I + 21 C4A + 20 C128A"},{"idx":1,"role":"SWA_MLA","layers":44,"blocks":[64],"sws":[128],"crs":[1],"pageSizes":[37440],"contents":"44 个 SWA cache（每个模型层一个）"},{"idx":2,"role":"SWA_MLA","layers":42,"blocks":[4],"sws":[8],"crs":[1],"pageSizes":[8640,32832],"contents":"21 C4 主 MLA compressor 状态 + 21 C4 Indexer compressor 状态"},{"idx":3,"role":"SWA_MLA","layers":20,"blocks":[8],"sws":[128],"crs":[1],"pageSizes":[32832],"contents":"20 个 C128 主 MLA compressor 状态"}],"final_groups":[{"idx":0,"layers":62,"pageSizes":[1728,8640,37440],"origin":"full-MLA（未切分）"},{"idx":1,"layers":22,"pageSizes":[37440],"origin":"SWA cache，子组 1 / 2"},{"idx":2,"layers":22,"pageSizes":[37440],"origin":"SWA cache，子组 2 / 2"},{"idx":3,"layers":42,"pageSizes":[8640,37440],"origin":"(4,8) 桶：21 indexer state (8640) + 21 mla state (padding 32832→37440)"},{"idx":4,"layers":20,"pageSizes":[37440],"origin":"C128 compressor 状态（page 32832 → 37440）"}],"final_page_sizes":[1728,8640,37440],"bars":[{"label":"C128A","page":1728,"tone":"warn"},{"label":"C4I","page":8640,"tone":"info"},{"label":"C4A","page":37440,"tone":"success"}],"padding_table_rows":[{"group":"group[1] (64,128)","source":"44 SWA cache","orig":37440,"cand":37440,"aligned":37440,"waste":0,"rowspan":1},{"group":"group[2] (4,8)","source":"21 C4 主 MLA comp. 状态","orig":32832,"cand":37440,"aligned":37440,"waste":4608,"rowspan":2},{"group":"","source":"21 C4 Indexer comp. 状态","orig":8640,"cand":8640,"aligned":8640,"waste":0,"rowspan":0},{"group":"group[3] (8,128)","source":"20 C128 主 MLA comp. 状态","orig":32832,"cand":37440,"aligned":37440,"waste":4608,"rowspan":1}],"tuple_split_rows":[{"name":"full-MLA（group[0]）","orig_t":21,"align_t":22,"split":"1 组","sub_size":62},{"name":"SWA cache（44 层）","orig_t":44,"align_t":44,"split":"2 组","sub_size":22},{"name":"(4,8) 桶（42 层 = 21 主 + 21 indexer）","orig_t":21,"align_t":22,"split":"1 组","sub_size":42},{"name":"C128 主 compressor 状态","orig_t":20,"align_t":22,"split":"1 组","sub_size":20}],"copy":{"high_level":{"intro_html":"DeepSeek-V4 是一个使用了三种 Attention 的混合模型：<strong>SWA\u003c/strong>（Sliding Window Attention）、\n<strong>CSA\u003c/strong>（Compressed Sparse Attention）和 <strong>HCA\u003c/strong>（Heavily Compressed Attention），\n因此需要缓存多种 KV cache。\n","cache_kinds_html":"<ul>\n  <li><strong>SWA\u003c/strong>：所有层都有 SWA 分支，每层缓存 <code>sliding_window\u003c/code> 长度个 token。\n    以 Flash 版本为例，共 43 层 SWA KV cache；开启 MTP 时再多 1 层。\u003c/li>\n  <li><strong>CSA\u003c/strong>：\n    <ul>\n      <li><span style=\"color:#599ce7\"><strong>C4 KV-Cache\u003c/strong>\u003c/span>：按 compress_ratio=4 压缩后的 KV cache\u003c/li>\n      <li>C4 Compressor State Cache：需要缓存 <code>coff × compressed_ratio\u003c/code> 个 token 的 KV 与 score；C4 的 coff=2\u003c/li>\n      <li><span style=\"color:#5fb88a\"><strong>C4 Indexer KV-Cache\u003c/strong>\u003c/span>：Indexer 的 Key Cache，同样按 compress_ratio=4 压缩\u003c/li>\n      <li>C4 Indexer Compressor State Cache：Lighting Indexer 内部也有一个 compressor，coff=2\u003c/li>\n    \u003c/ul>\n  \u003c/li>\n  <li><strong>HCA\u003c/strong>：\n    <ul>\n      <li><span style=\"color:#599ce7\"><strong>C128 KV-Cache\u003c/strong>\u003c/span>：按 compress_ratio=128 压缩后的 KV cache\u003c/li>\n      <li>C128 Compressor State Cache：coff=1\u003c/li>\n    \u003c/ul>\n  \u003c/li>\n\u003c/ul>\n","image1_url":"https://liujiaxu-pic.oss-cn-beijing.aliyuncs.com/QQ_1778546929833.png","image1_alt":"C4 MLA + Indexer 结构","image2_url":"https://liujiaxu-pic.oss-cn-beijing.aliyuncs.com/QQ_1778547159897.png","image2_alt":"C128 + Compressor 结构","scheme_intro_html":"每种 cache 占用的存储空间差别很大，强行放进同一种 page size 的 KV cache tensor 会出现大量 padding，浪费 HBM。\n因此 vLLM 团队在\n<a href=\"https://github.com/vllm-project/vllm/pull/40860\" target=\"_blank\" rel=\"noopener\">PR #40860 [Feat] DeepSeek V4 Rebased\u003c/a>\n中提出了多种 page size 的方案：划分<strong>大、中、小三种 page size\u003c/strong>\n的 KV cache tensor，分别承载对应大小的 cache。整体方案如下：\n","image3_url":"https://liujiaxu-pic.oss-cn-beijing.aliyuncs.com/0506da8e-46ac-4ec1-9c24-dca6a236e702.png","image3_alt":"三种 page size 整体分组方案","image3_credit_html":"图片来自：\n<a href=\"https://drive.google.com/drive/folders/1Sb8Bqrz9rXU3GJOSerXBj5IDbftyFZMt\" target=\"_blank\" rel=\"noopener\">Google Drive\u003c/a>\n","classes_html":"<ul>\n  <li><strong>Full Attention 类\u003c/strong>：cache 随序列长度<strong>线性增加\u003c/strong>，包括\n    <span style=\"color:#599ce7\"><strong>C4 KV-Cache\u003c/strong>\u003c/span>、\n    <span style=\"color:#5fb88a\"><strong>C4 Indexer KV-Cache\u003c/strong>\u003c/span> 和\n    <span style=\"color:#599ce7\"><strong>C128 KV-Cache\u003c/strong>\u003c/span>。此类没有 padding，没有显存浪费。\u003c/li>\n  <li><strong>SWA 类\u003c/strong>：相对 Full Attention 而言，每条请求占用<strong>近似固定\u003c/strong>的显存，\n    包括所有 SWA KV cache 和所有 Compressor State（C4 Compressor State、C4 Indexer Compressor State、C128 Compressor State）。\n    此类存在一定 padding 浪费。\u003c/li>\n\u003c/ul>\n<ul>\n  <li>横向为同一个物理 KV cache tensor\u003c/li>\n  <li>纵向为同一个 group，使用相同的 block ID\u003c/li>\n\u003c/ul>\n","callout_title":"代码中真实的分组","callout_table_html":"<table>\n  <thead><tr>\n    <th>Group\u003c/th>\n    <th>1 · Full Attention\u003c/th>\n    <th>2 &amp; 3 · SWA\u003c/th>\n    <th>4 · C4 Compressor State\u003c/th>\n    <th>5 · C128 Compressor State\u003c/th>\n  \u003c/tr>\u003c/thead>\n  <tbody>\n    <tr><td>大 page size\u003c/td><td>C4 KV-Cache\u003c/td><td>SWA KV-Cache\u003c/td><td>C4 State-Cache\u003c/td><td>C128 State-Cache\u003c/td>\u003c/tr>\n    <tr><td>中 page size\u003c/td><td>C4 Indexer KV\u003c/td><td>Padding\u003c/td><td>C4 Indexer Score\u003c/td><td>Padding\u003c/td>\u003c/tr>\n    <tr><td>小 page size\u003c/td><td>C128 KV-Cache\u003c/td><td>Padding\u003c/td><td>Padding\u003c/td><td>Padding\u003c/td>\u003c/tr>\n  \u003c/tbody>\n\u003c/table>\n"},"step0":{"stat_model_layers":"模型层（43 隐藏 + 1 MTP）","stat_kv_entries":"KVCacheSpec 条目","stat_mla_entries":"MLAAttentionSpec 条目","stat_swa_entries":"SlidingWindowMLASpec 条目","intro":"每层的 spec 由 <code>vllm/model_executor/layers/deepseek_v4_attention.py\u003c/code>\n与 <code>deepseek_compressor.py\u003c/code> 里 4 个类按\n<code>compress_ratios[layer_id]\u003c/code> 产出：21 个 C4 层、20 个 C128 层、3 个 SWA-only 层。\n","table_title":"KVCacheSpec汇总","table_head_spec":"Spec 类","table_head_block":"block_size","table_head_sw":"sliding_window","table_head_head":"head_size","table_head_cr":"compress_ratio","table_head_page":"page_size_bytes","table_head_layers":"# 层","table_head_source":"来源类","callout_168_title":"为什么有 168 个KVCacheSpec","callout_168_body":"每个模型层都有 SWA cache（44 个）。C4 层（21 个）额外创建 主 MLA + 主 MLA 的 compressor 状态 +\nIndexer K-cache + <strong>Indexer 内 compressor 的 state cache\u003c/strong>（4 个/层）；\nC128 层（20 个）额外创建 主 MLA + 主 MLA 的 compressor 状态（2 个/层，没有 Indexer）；\nSWA-only 层（compress_ratio = 0，共 3 个）只有 SWA cache。\n合计 = 44 + 21×4 + 20×2 = <strong>168\u003c/strong>。\n","spec_badge_suffix_layers":"个层","spec_badge_suffix_source":"来源"},"step2":{"p1":"遍历所有 spec：<code>SlidingWindowMLASpec\u003c/code> 按\n<code>(block_size, sliding_window)\u003c/code> 进入嵌套字典分桶；<code>MLAAttentionSpec\u003c/code>\n不管 head/cr 一律塞进同一个 <code>mla_specs\u003c/code> 桶。\n","p_spec_two_kinds":"<code>KVCacheSpec\u003c/code> 在这里被分成两类：<strong>Full Attention\u003c/strong> 类\n（对应 <code>MLAAttentionSpec\u003c/code>），KV 随序列长度<strong>线性\u003c/strong>增长；\n<strong>SWA\u003c/strong> 类（对应 <code>SlidingWindowMLASpec\u003c/code>），在滑动窗口与块大小固定时，\n每条请求在该 cache 上的占用由窗口上界决定，可视为<strong>近似固定显存\u003c/strong>（不会像 full attention 那样随序列长度一直涨）。\n","code_ref":"vllm/v1/core/kv_cache_utils.py · L1432-L1436","mla_card_title":"mla_specs（单桶）","mla_card_tag":"62 层","mla_card_footer":"这个桶内的 page size 并不统一：<code>1728\u003c/code>、<code>8640\u003c/code>、<code>37440\u003c/code> B 三种共存。","swa_card_title":"grouped_swa_mla_specs（按 (block, sw) 分桶）","swa_card_tag":"3 桶 · 106 层","key_prefix":"key = ","callout_warn_title":"注意 (4, 8) 桶里其实有两类层","callout_warn_body":"C4 层的主 MLA 和 Indexer 内部各自跑了一个 <code>DeepseekCompressor\u003c/code>，\n两个 compressor 的 state cache 都用 <code>(block=4, sw=8)\u003c/code>，但\n<code>head_size\u003c/code> 不同（2048 vs 512），最终 page size 也不同\n（32832 B vs 8640 B）。源码注释把这个桶叫 \"C4I + C4A\"，确认这是有意为之——\nIndexer 的 state 故意挑同样的 (block, sw)，以便和 Indexer K cache 共享物理 tensor。\n"},"step3":{"p1":"每个桶通过 <code>UniformTypeKVCacheSpecs.from_specs\u003c/code> 包装。这里的\n\"uniform\" 只表示\"spec 类相同\"——包装内部允许各层 page size 不同，\n这正是 DeepSeek-V4 节省显存的关键。\n","code_ref":"vllm/v1/core/kv_cache_utils.py · L1438-L1448","callout_order_title":"顺序很关键","callout_order_body":"返回的列表是 <code>[mla_uniform_spec, *swa_uniform_specs]\u003c/code>。\n下游 <code>_get_kv_cache_groups_uniform_groups\u003c/code> 硬编码假设\n<code>grouped_specs[0]\u003c/code> 一定是 full-MLA group，并把它的\n<code>get_page_sizes()\u003c/code> 当作所有其它组必须对齐到的\"标准桶集合\"。\n","h_groups":"封装结果：4 个 UniformTypeKVCacheSpecs","lead":"函数返回时，得到 4 个 <code>UniformTypeKVCacheSpecs\u003c/code>：","stat_layers_label":"# 层","stat_num_pages_label":"不同 page size 数","callout_inner_title":"注意每个组的内部异构","callout_inner_body":"group[0] 有 62 层却包含<strong>三种\u003c/strong>不同的 page size（1728 / 8640 / 37440）；\ngroup[2] (4,8) 也有<strong>两种\u003c/strong> page size（8640 / 32832），因为 C4 主 MLA 和 C4 Indexer\n各自的 compressor 都落进了这个桶。函数刻意<em>不去统一\u003c/em> page size——\n保留每层的 page size 差异正是优化点。\n"},"step5":{"p1":"<code>_get_kv_cache_groups_uniform_groups\u003c/code> 拿到 4 个\n<code>UniformTypeKVCacheSpecs\u003c/code> 后，做两件事来对齐最终\n<code>KVCacheTensor\u003c/code> 布局。\n","callout_what_title":"先解释一下：layer-tuple 是什么","callout_what_body":"一个 <code>UniformTypeKVCacheSpecs\u003c/code> 里可以同时有几种 page size\n（例如 full-MLA group 同时存在 <code>1728 / 8640 / 37440\u003c/code> 三种）。\n把每种 page size 中\"按顺序对应\"的 1 个 layer 凑成一组，这一组就是 1 个 <strong>layer-tuple\u003c/strong>，\n它们在物理上将<strong>共享同一份 block table\u003c/strong>、占用同一个 tuple 槽位。\n<br/>\n<code>UniformTypeKVCacheSpecs.get_num_layer_tuples()\u003c/code>（<code>vllm/v1/kv_cache_interface.py\u003c/code>\n<code>L712-L715\u003c/code>）取的是该 group 里<strong>最常见 page size 的层数\u003c/strong>，作为该 group 的 tuple 总数。\n<br/>\n举例：full-MLA group 有 21 个 C4A（page=37440）+ 21 个 C4I（page=8640）+ 20 个 C128A（page=1728），\n最常见 page size 的层数 = 21，所以 <code>num_layer_tuples = 21\u003c/code>（少出来的那 1 个 C128A 槽位用 padding 顶上）。\nSWA group 每组只有 1 种 page size，<code>num_layer_tuples\u003c/code> 就等于该 group 的层数。\n","h_pad":"① 把 SWA page 向上对齐到 full-MLA 桶","p_pad":"每个 SWA-MLA 层的 page 向上取整到 <code>full_mla.get_page_sizes()\u003c/code> 里\"最近且不小于\"的那个值。\n注意 (4,8) 桶里有 <strong>两种\u003c/strong> page size，会各自找各自的候选。\n","th_group":"SWA 组","th_source":"来源层","th_orig":"原 page (B)","th_cand":"候选","th_aligned":"对齐后 (B)","th_waste":"每页浪费","h_tuple":"② 选定 num_layer_tuples 并切组","p_tuple":"各组 layer-tuple 数原本是 <code>[21, 44, 21, 20]\u003c/code>——注意 (4,8) 桶虽然有 42 层，\n但 <code>get_num_layer_tuples\u003c/code> 取的是\"最常见 page size 的层数\"，所以仍然是 21。\n<code>_approximate_gcd\u003c/code> 选定 <code>num_layer_tuples = 22\u003c/code>，因为它能让全局上取整 padding 最小。\n","th_grp":"组","th_orig_t":"原 tuple 数","th_align_t":"向上对齐到","th_split":"切成","th_sub":"每个子组大小","callout_gcd_title":"为什么是 num_layer_tuples = 22","callout_gcd_body":"当 d = 22 时，padding = (22−21) + (44−44) + (22−21) + (22−20) = 1 + 0 + 1 + 2 = 4，\n这是全局最小值。如果取更大的 d（比如 44），所有组都得分配 44 个 tuple，预留量会膨胀约 3 倍。\n","h_algo":"③ _approximate_gcd 怎么挑出 d = 22","p_algo":"目标函数是「把每个 group 的 layer-tuple 数向上对齐到 d 的倍数后，全局浪费的 tuple 槽位之和」：\n<code>pad(d) = Σ<sub>i\u003c/sub> ((d − x<sub>i\u003c/sub> mod d) mod d)\u003c/code>。\n搜索区间是 <code>d ∈ [lower_bound, max(x<sub>i\u003c/sub>)]\u003c/code>，\n其中 <code>lower_bound = x<sub>0\u003c/sub>\u003c/code> = full-MLA group 的 <code>num_layer_tuples\u003c/code>（本例为 21）。\n暴力枚举每个 d，挑 <code>pad\u003c/code> 最小的；<strong>平手时偏好更大的 d\u003c/strong>——\n因为 d 越大，下游 <code>cdiv(num_layers_per_size, d)\u003c/code> 切出来的子组就越少，\n调度时遍历 group 的开销更低。\n","code_ref_algo":"vllm/v1/core/kv_cache_utils.py · L1462-L1483","h_algo_table":"在 values=[21, 44, 21, 20] 上的枚举（部分）","p_algo_table_intro":"具体到 DeepSeek-V4-Flash，输入是封装步骤产出的 4 个 group 各自的 <code>num_layer_tuples\u003c/code>。\n下表列出几个有代表性的 d，单元格里是「该 group 上取整到 d 倍数后浪费的 tuple 数」。\n","th_alg_d":"d","th_alg_pad0":"21 → ⌈21/d⌉·d (full-MLA)","th_alg_pad1":"44 → ⌈44/d⌉·d (SWA cache)","th_alg_pad2":"21 → ⌈21/d⌉·d ((4,8) 桶)","th_alg_pad3":"20 → ⌈20/d⌉·d ((8,128) 桶)","th_alg_sum":"总 padding","th_alg_note":"备注","algo_table_rows":[{"d":21,"pads":[0,19,0,1],"sum":20,"best":false,"note":"44 mod 21 = 2，要再补 19；离最优很远"},{"d":22,"pads":[1,0,1,2],"sum":4,"best":true,"note":"全局最小，且大于 lower_bound=21"},{"d":23,"pads":[2,2,2,3],"sum":9,"best":false,"note":""},{"d":24,"pads":[3,4,3,4],"sum":14,"best":false,"note":""},{"d":25,"pads":[4,6,4,5],"sum":19,"best":false,"note":"随 d 增大 padding 整体抬升"},{"d":44,"pads":[23,0,23,24],"sum":70,"best":false,"note":"所有组都补到 44，预留量约 3×"}]},"step_tensor":{"num_layer_tuples":22,"h_input":"输入：5 个 KVCacheGroupSpec","p_input":"这是上一步对齐之后的产物——切完组、做完 page padding 的 5 个\n<code>KVCacheGroupSpec\u003c/code>。下面的 <code>_get_kv_cache_config_deepseek_v4\u003c/code>\n就是基于它们来生成物理 tensor 描述符的。\n","th_idx":"#","th_layers":"# 层","th_pages":"page sizes (B)","th_origin":"来源","p1":"上一步切完组之后，每个 <code>KVCacheGroupSpec\u003c/code> 里的 layer 已经按 page size 分好桶\n（例如 group[0] 有三个桶：<code>1728 / 8640 / 37440\u003c/code> 各一摞 layer 名）。\n<code>_get_kv_cache_config_deepseek_v4\u003c/code> 要做的事很具体：\n<strong>把所有 group 在「同一个 tuple 槽位 + 同一种 page size」上的 layer 汇总到同一条\n<code>KVCacheTensor\u003c/code>\u003c/strong>——这些 layer 后续将共享同一份物理 buffer 与同一份 block table。\n<br/>\n每条 <code>KVCacheTensor\u003c/code> 只有两个字段：<code>size\u003c/code>（这块 buffer 总字节数 =\n<code>page_size × num_blocks\u003c/code>）和 <code>shared_by\u003c/code>（用这块 buffer 的所有 layer 名）。\n最终一共 emit <code>num_layer_tuples × len(page_sizes) = 22 × 3 = 66\u003c/code> 条描述符，\nworker 拿到后再真正调 <code>torch.zeros\u003c/code> 向 GPU 申请显存。\n","h_step1":"① 构造 KVCacheTensor 描述符（scheduler 端）","p_step1":"在 scheduler 端遍历 <code>num_layer_tuples × page_sizes\u003c/code> 的笛卡尔积，\n每个 (tuple_idx, page_size) 槽位 emit 一条 <code>KVCacheTensor\u003c/code>，\n<code>shared_by\u003c/code> 收集所有 group 在该槽位上的 layer 名字——\n这些 layer 后续将<strong>共享同一份物理 tensor\u003c/strong>。\n","code_ref1":"vllm/v1/core/kv_cache_utils.py · L1216-L1226","h_step2":"② Worker 真正分配显存","p_step2":"worker 启动后遍历 <code>kv_cache_config.kv_cache_tensors\u003c/code>，\n每个描述符调一次 <code>torch.zeros(size, dtype=torch.int8)\u003c/code>——\n<strong>先按字节级 int8 分配\u003c/strong>，稍后 <code>_reshape_kv_cache\u003c/code>\n再按各层 dtype <code>view\u003c/code> 成 <code>[num_blocks, block_size, ...]\u003c/code>。\n<br/>\n<span class=\"muted\">实现有两份完全等价的拷贝：<code>vllm/v1/worker/gpu/attn_utils.py::_allocate_kv_cache\u003c/code>\n与 <code>vllm/v1/worker/gpu_model_runner.py::_allocate_kv_cache_tensors\u003c/code>。\u003c/span>\n","code_ref2":"vllm/v1/worker/gpu/attn_utils.py · L128-L142","h_count":"③ DeepSeek-V4-Flash 一共分配多少个？","p_count":"<strong>公式：\u003c/strong>物理 tensor 数 = <code>num_layer_tuples × len(page_sizes)\u003c/code>。\n代入 <strong>22 × 3 = 66\u003c/strong> 个 <code>KVCacheTensor\u003c/code> 描述符，\n对应 <strong>66 次 <code>torch.zeros\u003c/code> 调用\u003c/strong>。\n但其中有 3 个 <code>shared_by=[]\u003c/code> 的\"空槽位\"——没有任何 layer 引用它们，\n分配出来当场被 Python GC 回收，所以<strong>实际持久存活 63 个\u003c/strong>物理 tensor。\n","stat_num_tuples_label":"num_layer_tuples","stat_num_ps_label":"page size 数","stat_total_label":"KVCacheTensor 总数","stat_kept_label":"实际持久存活","h_empty":"三个空槽位（shared_by = []）","p_empty":"8640 page 出现在 group[0]（21 个 C4 Indexer K-cache）和 group[3]（21 个 Indexer compressor state），\ntuple_idx=21 两边都已经用完；1728 page 只在 group[0] 出现，且仅 20 个 C128A，\ntuple_idx ∈ {20, 21} 已越界。它们本质上是\"对齐 <code>num_layer_tuples = 22\u003c/code>\n付出的代价\" 在 tensor 维度上的体现。\n","empty_grid":{"intro_html":"把 66 个 <code>KVCacheTensor\u003c/code> 摊成 <strong>3 行（page size）× 22 列（tuple_idx）\u003c/strong> 的矩阵——\n每格的数字是该槽位上 <code>shared_by\u003c/code> 的长度（多少个 layer 共享这块物理 tensor）。\n<span style=\"color: var(--danger); font-weight: 600;\">红色 = 0（空槽位）\u003c/span>共 3 个，\n矩阵右下角自然形成一个\"<strong>缺角\u003c/strong>\"。\n<br/>\n这 3 个槽位的字节数已经在<strong>预算公式\u003c/strong>\n<code>num_blocks = available_memory ÷ (Σ page_sizes × num_layer_tuples)\u003c/code>\n里被一并扣除——也就是说，因为要把 8640 / 1728 的层数也按 <code>num_layer_tuples = 22\u003c/code> 来算，\n总预算被它们\"占了名额\"，<code>num_blocks\u003c/code> 因此变小了。\nworker 启动时仍会照常 <code>torch.zeros\u003c/code> 申请显存；之后由于没有 layer 引用，\nPython 对象会被销毁，那段 CUDA 内存归还给 PyTorch caching allocator，\n是否被复用取决于后续 alloc 模式。\n","rows":[{"ps":37440,"counts":[5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4,2]},{"ps":8640,"counts":[2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0]},{"ps":1728,"counts":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0]}],"legend":[{"tone":"danger","label":"= 0（空，无 layer 引用）"},{"tone":"neutral","label":"= 1"},{"tone":"info","label":"= 2"},{"tone":"success","label":"≥ 3"}]}},"step6":{"stat_page_kinds":"不同的 page size 种数","stat_num_groups":"最终 KVCacheGroupSpec 数","stat_total_slots":"总 layer 槽位","h_bars":"3 种 KV cache tensor 的 page size","p_bars":"来自 <code>full_mla.get_page_sizes()\u003c/code>。\n<code>_get_kv_cache_config_deepseek_v4\u003c/code> 产出的每个\n<code>KVCacheTensor\u003c/code>，其每个 block 的大小必定是这 3 个之一。\n注意 <code>8640\u003c/code> B 同时被两类层用到——C4 Indexer K-cache（full-MLA 桶）\n和 C4 Indexer 内 compressor 的 state cache（(4,8) 桶）。"}},"images":{}};
+const DEMO = {"meta":{"page_title":"Deepseek-V4 KV Cache Layout流程演示","eyebrow":"vllm/v1/core/kv_cache_utils.py · DeepSeek-V4-Flash","h1":"Deepseek-V4 KV Cache Layout流程演示","subtitle_html":"分步演示 DeepSeek-V4 的 KV cache 分组流程：168 个原始\n<code>KVCacheSpec\u003c/code> 条目如何经过分桶、对齐与切分，最终归并成\n3 种 page size、5 个 <code>KVCacheGroupSpec\u003c/code> 的物理布局。\n点击上方任一步骤即可跳转。\n<br/><span class=\"muted\">引用代码来自 vLLM <code>v0.20.2\u003c/code>。\u003c/span>\n"},"nav":{"prev":"← 上一步","next":"下一步 →"},"data_note":"由 /tmp/trace_deepseek_v4_kv_cache.py 实际运行产线代码验证，逐字节一致","steps":[{"id":0,"title":"High Level Idea","subtitle":"三类 Attention · 三种 page size · 五个 group"},{"id":1,"title":"准备","subtitle":"168 个 KVCacheSpec 原始条目"},{"id":2,"title":"按 spec 类型分桶","subtitle":"Full Attention 单桶 + SWA 按 (block, sw) 多桶"},{"id":3,"title":"Uniform 封装","subtitle":"from_specs → 4 个 UniformTypeKVCacheSpecs · group[0] 必为 full-MLA"},{"id":4,"title":"Group 层数对齐","subtitle":"对齐 num_layer_tuples + page padding"},{"id":5,"title":"物理 tensor 分配","subtitle":"KVCacheTensor 描述 · worker 端 torch.zeros"},{"id":6,"title":"最终结果","subtitle":"3 种 page size · 5 个 KVCacheGroupSpec"}],"input_specs":[{"kind":"MLA","block":256,"sw":null,"head":132,"pageBytes":8640,"cr":4,"layers":21,"label":"C4 Indexer K cache（C4I）","source":"DeepseekV4IndexerCache"},{"kind":"MLA","block":256,"sw":null,"head":512,"pageBytes":37440,"cr":4,"layers":21,"label":"C4 主 MLA（C4A）","source":"DeepseekV4MLAAttention"},{"kind":"MLA","block":256,"sw":null,"head":512,"pageBytes":1728,"cr":128,"layers":20,"label":"C128 主 MLA（C128A）","source":"DeepseekV4MLAAttention"},{"kind":"SWA","block":64,"sw":128,"head":512,"pageBytes":37440,"cr":1,"layers":44,"label":"SWA 缓存（每层都有）","source":"DeepseekV4SWACache"},{"kind":"SWA","block":4,"sw":8,"head":2048,"pageBytes":32832,"cr":1,"layers":21,"label":"C4 主 MLA 的 compressor 状态","source":"DeepseekCompressor.state_cache"},{"kind":"SWA","block":4,"sw":8,"head":512,"pageBytes":8640,"cr":1,"layers":21,"label":"C4 Indexer 内的 compressor 状态","source":"DeepseekCompressor.state_cache"},{"kind":"SWA","block":8,"sw":128,"head":1024,"pageBytes":32832,"cr":1,"layers":20,"label":"C128 主 MLA 的 compressor 状态","source":"DeepseekCompressor.state_cache"}],"total_layers":44,"groups_after":[{"idx":0,"role":"FULL_MLA","layers":62,"blocks":[256],"sws":[null],"crs":[4,128],"pageSizes":[1728,8640,37440],"contents":"21 C4I + 21 C4A + 20 C128A"},{"idx":1,"role":"SWA_MLA","layers":44,"blocks":[64],"sws":[128],"crs":[1],"pageSizes":[37440],"contents":"44 个 SWA cache（每个模型层一个）"},{"idx":2,"role":"SWA_MLA","layers":42,"blocks":[4],"sws":[8],"crs":[1],"pageSizes":[8640,32832],"contents":"21 C4 主 MLA compressor 状态 + 21 C4 Indexer compressor 状态"},{"idx":3,"role":"SWA_MLA","layers":20,"blocks":[8],"sws":[128],"crs":[1],"pageSizes":[32832],"contents":"20 个 C128 主 MLA compressor 状态"}],"final_groups":[{"idx":0,"layers":62,"pageSizes":[1728,8640,37440],"origin":"full-MLA（未切分）"},{"idx":1,"layers":22,"pageSizes":[37440],"origin":"SWA cache，子组 1 / 2"},{"idx":2,"layers":22,"pageSizes":[37440],"origin":"SWA cache，子组 2 / 2"},{"idx":3,"layers":42,"pageSizes":[8640,37440],"origin":"(4,8) 桶：21 indexer state (8640) + 21 mla state (padding 32832→37440)"},{"idx":4,"layers":20,"pageSizes":[37440],"origin":"C128 compressor 状态（page 32832 → 37440）"}],"final_page_sizes":[1728,8640,37440],"bars":[{"label":"C128A","page":1728,"tone":"warn"},{"label":"C4I","page":8640,"tone":"info"},{"label":"C4A","page":37440,"tone":"success"}],"padding_table_rows":[{"group":"group[1] (64,128)","source":"44 SWA cache","orig":37440,"cand":37440,"aligned":37440,"waste":0,"rowspan":1},{"group":"group[2] (4,8)","source":"21 C4 主 MLA comp. 状态","orig":32832,"cand":37440,"aligned":37440,"waste":4608,"rowspan":2},{"group":"","source":"21 C4 Indexer comp. 状态","orig":8640,"cand":8640,"aligned":8640,"waste":0,"rowspan":0},{"group":"group[3] (8,128)","source":"20 C128 主 MLA comp. 状态","orig":32832,"cand":37440,"aligned":37440,"waste":4608,"rowspan":1}],"tuple_split_rows":[{"name":"full-MLA（group[0]）","orig_t":21,"align_t":22,"split":"1 组","sub_size":62},{"name":"SWA cache（44 层）","orig_t":44,"align_t":44,"split":"2 组","sub_size":22},{"name":"(4,8) 桶（42 层 = 21 主 + 21 indexer）","orig_t":21,"align_t":22,"split":"1 组","sub_size":42},{"name":"C128 主 compressor 状态","orig_t":20,"align_t":22,"split":"1 组","sub_size":20}],"copy":{"high_level":{"intro_html":"DeepSeek-V4 是一个使用了三种 Attention 的混合模型：<strong>SWA\u003c/strong>（Sliding Window Attention）、\n<strong>CSA\u003c/strong>（Compressed Sparse Attention）和 <strong>HCA\u003c/strong>（Heavily Compressed Attention），\n因此需要缓存多种 KV cache。\n","cache_kinds_html":"<ul>\n  <li><strong>SWA\u003c/strong>：所有层都有 SWA 分支，每层缓存 <code>sliding_window\u003c/code> 长度个 token。\n    以 Flash 版本为例，共 43 层 SWA KV cache；开启 MTP 时再多 1 层。\u003c/li>\n  <li><strong>CSA\u003c/strong>：\n    <ul>\n      <li><span style=\"color:#599ce7\"><strong>C4 KV-Cache\u003c/strong>\u003c/span>：按 compress_ratio=4 压缩后的 KV cache\u003c/li>\n      <li>C4 Compressor State Cache：需要缓存 <code>coff × compressed_ratio\u003c/code> 个 token 的 KV 与 score；C4 的 coff=2\u003c/li>\n      <li><span style=\"color:#5fb88a\"><strong>C4 Indexer KV-Cache\u003c/strong>\u003c/span>：Indexer 的 Key Cache，同样按 compress_ratio=4 压缩\u003c/li>\n      <li>C4 Indexer Compressor State Cache：Lighting Indexer 内部也有一个 compressor，coff=2\u003c/li>\n    \u003c/ul>\n  \u003c/li>\n  <li><strong>HCA\u003c/strong>：\n    <ul>\n      <li><span style=\"color:#599ce7\"><strong>C128 KV-Cache\u003c/strong>\u003c/span>：按 compress_ratio=128 压缩后的 KV cache\u003c/li>\n      <li>C128 Compressor State Cache：coff=1\u003c/li>\n    \u003c/ul>\n  \u003c/li>\n\u003c/ul>\n","image1_url":"https://liujiaxu-pic.oss-cn-beijing.aliyuncs.com/QQ_1778546929833.png","image1_alt":"C4 MLA + Indexer 结构","image2_url":"https://liujiaxu-pic.oss-cn-beijing.aliyuncs.com/QQ_1778547159897.png","image2_alt":"C128 + Compressor 结构","scheme_intro_html":"每种 cache 占用的存储空间差别很大，强行放进同一种 page size 的 KV cache tensor 会出现大量 padding，浪费 HBM。\n因此 vLLM 团队在\n<a href=\"https://github.com/vllm-project/vllm/pull/40860\" target=\"_blank\" rel=\"noopener\">PR #40860 [Feat] DeepSeek V4 Rebased\u003c/a>\n中提出了多种 page size 的方案：划分<strong>大、中、小三种 page size\u003c/strong>\n的 KV cache tensor，分别承载对应大小的 cache。整体方案如下：\n","image3_url":"https://liujiaxu-pic.oss-cn-beijing.aliyuncs.com/0506da8e-46ac-4ec1-9c24-dca6a236e702.png","image3_alt":"三种 page size 整体分组方案","image3_credit_html":"图片来自：\n<a href=\"https://drive.google.com/drive/folders/1Sb8Bqrz9rXU3GJOSerXBj5IDbftyFZMt\" target=\"_blank\" rel=\"noopener\">Google Drive\u003c/a>\n","classes_html":"<ul>\n  <li><strong>Full Attention 类\u003c/strong>：cache 随序列长度<strong>线性增加\u003c/strong>，包括\n    <span style=\"color:#599ce7\"><strong>C4 KV-Cache\u003c/strong>\u003c/span>、\n    <span style=\"color:#5fb88a\"><strong>C4 Indexer KV-Cache\u003c/strong>\u003c/span> 和\n    <span style=\"color:#599ce7\"><strong>C128 KV-Cache\u003c/strong>\u003c/span>。此类没有 padding，没有显存浪费。\u003c/li>\n  <li><strong>SWA 类\u003c/strong>：相对 Full Attention 而言，每条请求占用<strong>近似固定\u003c/strong>的显存，\n    包括所有 SWA KV cache 和所有 Compressor State（C4 Compressor State、C4 Indexer Compressor State、C128 Compressor State）。\n    此类存在一定 padding 浪费。\u003c/li>\n\u003c/ul>\n<ul>\n  <li>横向为同一个物理 KV cache tensor\u003c/li>\n  <li>纵向为同一个 group，使用相同的 block ID\u003c/li>\n\u003c/ul>\n","callout_title":"代码中真实的分组","callout_table_html":"<table>\n  <thead><tr>\n    <th>Group\u003c/th>\n    <th>1 · Full Attention\u003c/th>\n    <th>2 &amp; 3 · SWA\u003c/th>\n    <th>4 · C4 Compressor State\u003c/th>\n    <th>5 · C128 Compressor State\u003c/th>\n  \u003c/tr>\u003c/thead>\n  <tbody>\n    <tr><td>大 page size\u003c/td><td>C4 KV-Cache\u003c/td><td>SWA KV-Cache\u003c/td><td>C4 State-Cache\u003c/td><td>C128 State-Cache\u003c/td>\u003c/tr>\n    <tr><td>中 page size\u003c/td><td>C4 Indexer KV\u003c/td><td>Padding\u003c/td><td>C4 Indexer Score\u003c/td><td>Padding\u003c/td>\u003c/tr>\n    <tr><td>小 page size\u003c/td><td>C128 KV-Cache\u003c/td><td>Padding\u003c/td><td>Padding\u003c/td><td>Padding\u003c/td>\u003c/tr>\n  \u003c/tbody>\n\u003c/table>\n"},"step0":{"stat_model_layers":"模型层（43 隐藏 + 1 MTP）","stat_kv_entries":"KVCacheSpec 条目","stat_mla_entries":"MLAAttentionSpec 条目","stat_swa_entries":"SlidingWindowMLASpec 条目","intro":"每层的 spec 由 <code>vllm/model_executor/layers/deepseek_v4_attention.py\u003c/code>\n与 <code>deepseek_compressor.py\u003c/code> 里 4 个类按\n<code>compress_ratios[layer_id]\u003c/code> 产出：21 个 C4 层、20 个 C128 层、3 个 SWA-only 层。\n","table_title":"KVCacheSpec汇总","table_head_spec":"Spec 类","table_head_block":"block_size","table_head_sw":"sliding_window","table_head_head":"head_size","table_head_cr":"compress_ratio","table_head_page":"page_size_bytes","table_head_layers":"# 层","table_head_source":"来源类","callout_168_title":"为什么有 168 个KVCacheSpec","callout_168_body":"每个模型层都有 SWA cache（44 个）。C4 层（21 个）额外创建 主 MLA + 主 MLA 的 compressor 状态 +\nIndexer K-cache + <strong>Indexer 内 compressor 的 state cache\u003c/strong>（4 个/层）；\nC128 层（20 个）额外创建 主 MLA + 主 MLA 的 compressor 状态（2 个/层，没有 Indexer）；\nSWA-only 层（compress_ratio = 0，共 3 个）只有 SWA cache。\n合计 = 44 + 21×4 + 20×2 = <strong>168\u003c/strong>。\n","spec_badge_suffix_layers":"个层","spec_badge_suffix_source":"来源"},"step2":{"p1":"遍历所有 spec：<code>SlidingWindowMLASpec\u003c/code> 按\n<code>(block_size, sliding_window)\u003c/code> 进入嵌套字典分桶；<code>MLAAttentionSpec\u003c/code>\n不管 head/cr 一律塞进同一个 <code>mla_specs\u003c/code> 桶。\n","p_spec_two_kinds":"<code>KVCacheSpec\u003c/code> 在这里被分成两类：<strong>Full Attention\u003c/strong> 类\n（对应 <code>MLAAttentionSpec\u003c/code>），KV 随序列长度<strong>线性\u003c/strong>增长；\n<strong>SWA\u003c/strong> 类（对应 <code>SlidingWindowMLASpec\u003c/code>），在滑动窗口与块大小固定时，\n每条请求在该 cache 上的占用由窗口上界决定，可视为<strong>近似固定显存\u003c/strong>（不会像 full attention 那样随序列长度一直涨）。\n","code_ref":"vllm/v1/core/kv_cache_utils.py · L1432-L1436","mla_card_title":"mla_specs（单桶）","mla_card_tag":"62 层","mla_card_footer":"这个桶内的 page size 并不统一：<code>1728\u003c/code>、<code>8640\u003c/code>、<code>37440\u003c/code> B 三种共存。","swa_card_title":"grouped_swa_mla_specs（按 (block, sw) 分桶）","swa_card_tag":"3 桶 · 106 层","key_prefix":"key = ","callout_warn_title":"注意 (4, 8) 桶里其实有两类层","callout_warn_body":"C4 层的主 MLA 和 Indexer 内部各自跑了一个 <code>DeepseekCompressor\u003c/code>，\n两个 compressor 的 state cache 都用 <code>(block=4, sw=8)\u003c/code>，但\n<code>head_size\u003c/code> 不同（2048 vs 512），最终 page size 也不同\n（32832 B vs 8640 B）。源码注释把这个桶叫 \"C4I + C4A\"，确认这是有意为之——\nIndexer 的 state 故意挑同样的 (block, sw)，以便和 Indexer K cache 共享物理 tensor。\n"},"step3":{"p1":"每个桶通过 <code>UniformTypeKVCacheSpecs.from_specs\u003c/code> 包装。这里的\n\"uniform\" 只表示\"spec 类相同\"——包装内部允许各层 page size 不同，\n这正是 DeepSeek-V4 节省显存的关键。\n","code_ref":"vllm/v1/core/kv_cache_utils.py · L1438-L1448","callout_order_title":"顺序很关键","callout_order_body":"返回的列表是 <code>[mla_uniform_spec, *swa_uniform_specs]\u003c/code>。\n下游 <code>_get_kv_cache_groups_uniform_groups\u003c/code> 硬编码假设\n<code>grouped_specs[0]\u003c/code> 一定是 full-MLA group，并把它的\n<code>get_page_sizes()\u003c/code> 当作所有其它组必须对齐到的\"标准桶集合\"。\n","h_groups":"封装结果：4 个 UniformTypeKVCacheSpecs","lead":"函数返回时，得到 4 个 <code>UniformTypeKVCacheSpecs\u003c/code>：","stat_layers_label":"# 层","stat_num_pages_label":"不同 page size 数","callout_inner_title":"注意每个组的内部异构","callout_inner_body":"group[0] 有 62 层却包含<strong>三种\u003c/strong>不同的 page size（1728 / 8640 / 37440）；\ngroup[2] (4,8) 也有<strong>两种\u003c/strong> page size（8640 / 32832），因为 C4 主 MLA 和 C4 Indexer\n各自的 compressor 都落进了这个桶。函数刻意<em>不去统一\u003c/em> page size——\n保留每层的 page size 差异正是优化点。\n"},"step5":{"p1":"<code>_get_kv_cache_groups_uniform_groups\u003c/code> 拿到 4 个\n<code>UniformTypeKVCacheSpecs\u003c/code> 后，做两件事来对齐最终\n<code>KVCacheTensor\u003c/code> 布局。\n","callout_what_title":"先解释一下：layer-tuple 是什么","callout_what_body":"一个 <code>UniformTypeKVCacheSpecs\u003c/code> 里可以同时有几种 page size\n（例如 full-MLA group 同时存在 <code>1728 / 8640 / 37440\u003c/code> 三种）。\n把每种 page size 中\"按顺序对应\"的 1 个 layer 凑成一组，这一组就是 1 个 <strong>layer-tuple\u003c/strong>，\n它们在物理上将<strong>共享同一份 block table\u003c/strong>、占用同一个 tuple 槽位。\n<br/>\n<code>UniformTypeKVCacheSpecs.get_num_layer_tuples()\u003c/code>（<code>vllm/v1/kv_cache_interface.py\u003c/code>\n<code>L712-L715\u003c/code>）取的是该 group 里<strong>最常见 page size 的层数\u003c/strong>，作为该 group 的 tuple 总数。\n<br/>\n举例：full-MLA group 有 21 个 C4A（page=37440）+ 21 个 C4I（page=8640）+ 20 个 C128A（page=1728），\n最常见 page size 的层数 = 21，所以 <code>num_layer_tuples = 21\u003c/code>（少出来的那 1 个 C128A 槽位用 padding 顶上）。\nSWA group 每组只有 1 种 page size，<code>num_layer_tuples\u003c/code> 就等于该 group 的层数。\n","h_pad":"① 把 SWA page 向上对齐到 full-MLA 桶","p_pad":"每个 SWA-MLA 层的 page 向上取整到 <code>full_mla.get_page_sizes()\u003c/code> 里\"最近且不小于\"的那个值。\n注意 (4,8) 桶里有 <strong>两种\u003c/strong> page size，会各自找各自的候选。\n","th_group":"SWA 组","th_source":"来源层","th_orig":"原 page (B)","th_cand":"候选","th_aligned":"对齐后 (B)","th_waste":"每页浪费","h_tuple":"② 选定 num_layer_tuples 并切组","p_tuple":"各组 layer-tuple 数原本是 <code>[21, 44, 21, 20]\u003c/code>——注意 (4,8) 桶虽然有 42 层，\n但 <code>get_num_layer_tuples\u003c/code> 取的是\"最常见 page size 的层数\"，所以仍然是 21。\n<code>_approximate_gcd\u003c/code> 选定 <code>num_layer_tuples = 22\u003c/code>，因为它能让全局上取整 padding 最小。\n","th_grp":"组","th_orig_t":"原 tuple 数","th_align_t":"向上对齐到","th_split":"切成","th_sub":"每个子组大小","callout_gcd_title":"为什么是 num_layer_tuples = 22","callout_gcd_body":"当 d = 22 时，padding = (22−21) + (44−44) + (22−21) + (22−20) = 1 + 0 + 1 + 2 = 4，\n这是全局最小值。如果取更大的 d（比如 44），所有组都得分配 44 个 tuple，预留量会膨胀约 3 倍。\n","h_algo":"③ _approximate_gcd 怎么挑出 d = 22","p_algo":"目标函数是「把每个 group 的 layer-tuple 数向上对齐到 d 的倍数后，全局浪费的 tuple 槽位之和」：\n<code>pad(d) = Σ<sub>i\u003c/sub> ((d − x<sub>i\u003c/sub> mod d) mod d)\u003c/code>。\n搜索区间是 <code>d ∈ [lower_bound, max(x<sub>i\u003c/sub>)]\u003c/code>，\n其中 <code>lower_bound = x<sub>0\u003c/sub>\u003c/code> = full-MLA group 的 <code>num_layer_tuples\u003c/code>（本例为 21）。\n暴力枚举每个 d，挑 <code>pad\u003c/code> 最小的；<strong>平手时偏好更大的 d\u003c/strong>——\n因为 d 越大，下游 <code>cdiv(num_layers_per_size, d)\u003c/code> 切出来的子组就越少，\n调度时遍历 group 的开销更低。\n","code_ref_algo":"vllm/v1/core/kv_cache_utils.py · L1462-L1483","h_algo_table":"在 values=[21, 44, 21, 20] 上的枚举（部分）","p_algo_table_intro":"具体到 DeepSeek-V4-Flash，输入是封装步骤产出的 4 个 group 各自的 <code>num_layer_tuples\u003c/code>。\n下表列出几个有代表性的 d，单元格里是「该 group 上取整到 d 倍数后浪费的 tuple 数」。\n","th_alg_d":"d","th_alg_pad0":"21 → ⌈21/d⌉·d (full-MLA)","th_alg_pad1":"44 → ⌈44/d⌉·d (SWA cache)","th_alg_pad2":"21 → ⌈21/d⌉·d ((4,8) 桶)","th_alg_pad3":"20 → ⌈20/d⌉·d ((8,128) 桶)","th_alg_sum":"总 padding","th_alg_note":"备注","algo_table_rows":[{"d":21,"pads":[0,19,0,1],"sum":20,"best":false,"note":"44 mod 21 = 2，要再补 19；离最优很远"},{"d":22,"pads":[1,0,1,2],"sum":4,"best":true,"note":"全局最小，且大于 lower_bound=21"},{"d":23,"pads":[2,2,2,3],"sum":9,"best":false,"note":""},{"d":24,"pads":[3,4,3,4],"sum":14,"best":false,"note":""},{"d":25,"pads":[4,6,4,5],"sum":19,"best":false,"note":"随 d 增大 padding 整体抬升"},{"d":44,"pads":[23,0,23,24],"sum":70,"best":false,"note":"所有组都补到 44，预留量约 3×"}],"h_output":"产出：5 个 KVCacheGroupSpec","p_output":"完成 page padding + 切组之后，本步骤吐出 5 个\n<code>KVCacheGroupSpec\u003c/code>，这就是下一步 <code>_get_kv_cache_config_deepseek_v4\u003c/code>\n生成物理 tensor 描述符时直接消费的对象。\n","th_idx":"#","th_layers":"# 层","th_pages":"page sizes (B)","th_origin":"来源"},"step_tensor":{"num_layer_tuples":22,"p1":"上一步切完组之后，每个 <code>KVCacheGroupSpec\u003c/code> 里的 layer 已经按 page size 分好桶\n（例如 group[0] 有三个桶：<code>1728 / 8640 / 37440\u003c/code> 各一摞 layer 名）。\n<code>_get_kv_cache_config_deepseek_v4\u003c/code> 要做的事很具体：\n<strong>把所有 group 在「同一个 tuple 槽位 + 同一种 page size」上的 layer 汇总到同一条\n<code>KVCacheTensor\u003c/code>\u003c/strong>——这些 layer 后续将共享同一份物理 buffer 与同一份 block table。\n<br/>\n每条 <code>KVCacheTensor\u003c/code> 只有两个字段：<code>size\u003c/code>（这块 buffer 总字节数 =\n<code>page_size × num_blocks\u003c/code>）和 <code>shared_by\u003c/code>（用这块 buffer 的所有 layer 名）。\n最终一共 emit <code>num_layer_tuples × len(page_sizes) = 22 × 3 = 66\u003c/code> 条描述符，\nworker 拿到后再真正调 <code>torch.zeros\u003c/code> 向 GPU 申请显存。\n","h_step1":"① 构造 KVCacheTensor 描述符（scheduler 端）","p_step1":"在 scheduler 端遍历 <code>num_layer_tuples × page_sizes\u003c/code> 的笛卡尔积，\n每个 (tuple_idx, page_size) 槽位 emit 一条 <code>KVCacheTensor\u003c/code>，\n<code>shared_by\u003c/code> 收集所有 group 在该槽位上的 layer 名字——\n这些 layer 后续将<strong>共享同一份物理 tensor\u003c/strong>。\n","code_ref1":"vllm/v1/core/kv_cache_utils.py · L1216-L1226","h_step2":"② Worker 真正分配显存","p_step2":"worker 启动后遍历 <code>kv_cache_config.kv_cache_tensors\u003c/code>，\n每个描述符调一次 <code>torch.zeros(size, dtype=torch.int8)\u003c/code>——\n<strong>先按字节级 int8 分配\u003c/strong>，稍后 <code>_reshape_kv_cache\u003c/code>\n再按各层 dtype <code>view\u003c/code> 成 <code>[num_blocks, block_size, ...]\u003c/code>。\n<br/>\n<span class=\"muted\">实现有两份完全等价的拷贝：<code>vllm/v1/worker/gpu/attn_utils.py::_allocate_kv_cache\u003c/code>\n与 <code>vllm/v1/worker/gpu_model_runner.py::_allocate_kv_cache_tensors\u003c/code>。\u003c/span>\n","code_ref2":"vllm/v1/worker/gpu/attn_utils.py · L128-L142","h_count":"③ DeepSeek-V4-Flash 一共分配多少个？","p_count":"<strong>公式：\u003c/strong>物理 tensor 数 = <code>num_layer_tuples × len(page_sizes)\u003c/code>。\n代入 <strong>22 × 3 = 66\u003c/strong> 个 <code>KVCacheTensor\u003c/code> 描述符，\n对应 <strong>66 次 <code>torch.zeros\u003c/code> 调用\u003c/strong>。\n但其中有 3 个 <code>shared_by=[]\u003c/code> 的\"空槽位\"——没有任何 layer 引用它们，\n分配出来当场被 Python GC 回收，所以<strong>实际持久存活 63 个\u003c/strong>物理 tensor。\n","stat_num_tuples_label":"num_layer_tuples","stat_num_ps_label":"page size 数","stat_total_label":"KVCacheTensor 总数","stat_kept_label":"实际持久存活","h_empty":"物理 layout 与 三个空槽位（shared_by = []）","p_empty":"下方网格是 KV cache 在显存里的<strong>真实物理布局\u003c/strong>——\n<code>3 行（page size）× 22 列（tuple_idx）= 66\u003c/code> 个 <code>KVCacheTensor\u003c/code> 槽位。\n每个格子上的数字是该槽位的 <code>shared_by\u003c/code> 长度，即<strong>共享这块物理 tensor 的 layer 数\u003c/strong>。\n<strong>把鼠标悬停到任一格\u003c/strong>就能看到具体被哪几个 layer 共享。\n矩阵右下角的 <span style=\"color: var(--danger); font-weight: 600;\">红色单元格\u003c/span>\n就是 3 个空槽位（<code>shared_by = []\u003c/code>），下文会逐一解释它们的来源与代价。\n","empty_grid":{"intro_html":"网格按\"页大小 × tuple 序号\"展开。Worker 端按 <code>(tuple_idx, ps)\u003c/code>\n嵌套循环遍历整张表，每次调用一次 <code>torch.zeros\u003c/code>，分配出一块物理 tensor，\n然后把 <code>shared_by\u003c/code> 列表里的所有 layer 名都映射到这块 tensor 上——\n这就是<strong>多个 layer 共享同一份 KV cache 显存\u003c/strong>的具体实现。\n<br/>\n右下角 3 个红色空槽位，是预算分配阶段\"对齐 <code>num_layer_tuples = 22\u003c/code>\"付出的代价：\n<code>num_blocks = available_memory ÷ (Σ page_sizes × num_layer_tuples)\u003c/code>\n中已经把它们的字节数一并扣掉，<code>num_blocks\u003c/code> 因此略小。\nworker 仍会照常 <code>torch.zeros\u003c/code> 申请这 3 块显存，但因为没有任何 layer 引用，\nPython 对象很快被销毁，那段 CUDA 内存归还给 PyTorch caching allocator\n并可能被后续 alloc 复用。\n","rows":[{"ps":37440,"counts":[5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4,2]},{"ps":8640,"counts":[2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0]},{"ps":1728,"counts":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0]}],"legend":[{"tone":"danger","label":"= 0（空，无 layer 引用）"},{"tone":"neutral","label":"= 1"},{"tone":"info","label":"= 2"},{"tone":"success","label":"≥ 3"}],"slot_layers":[{"group":0,"ps":1728,"prefix":"group[0] · C128A.K","count":20},{"group":0,"ps":8640,"prefix":"group[0] · C4_Indexer.K","count":21},{"group":0,"ps":37440,"prefix":"group[0] · C4A.K","count":21},{"group":1,"ps":37440,"prefix":"group[1] · SWA_cache.subset_a","count":22},{"group":2,"ps":37440,"prefix":"group[2] · SWA_cache.subset_b","count":22},{"group":3,"ps":8640,"prefix":"group[3] · C4_Indexer.compressor","count":21},{"group":3,"ps":37440,"prefix":"group[3] · C4A.compressor","count":21},{"group":4,"ps":37440,"prefix":"group[4] · C128A.compressor","count":20}]}},"step6":{"h_pipeline":"整条流程一句话","p_pipeline":"把前 5 步串成一条链路，方便回头复盘。每一节点的数字都是上一步的产物。\n","pipeline_chain":[{"value":"168","label":"原始 KVCacheSpec","note":"step 1"},{"value":"4 类桶","label":"(kind, block, sw, cr)","note":"step 2"},{"value":"4 个","label":"UniformTypeKVCacheSpecs","note":"step 3"},{"value":"5 个","label":"KVCacheGroupSpec","note":"step 4"},{"value":"22 × 3","label":"layer-tuples × page size","note":"step 5"},{"value":"66 / 63","label":"KVCacheTensor 描述 / 实际分配","note":"step 5"}],"h_bars":"3 种 page size 的物理含义","p_bars":"全模型最终只剩 3 种 block 大小，源自 full-MLA group 的\n<code>get_page_sizes()\u003c/code>。每个 <code>KVCacheTensor\u003c/code>\n的 block 大小必定取这 3 个之一。\n","bar_notes":[{"label":"C128A · 1728 B","text":"<code>block_size=128\u003c/code>，C128A K-cache（短 / 稀疏窗口）。"},{"label":"C4I · 8640 B","text":"<code>block_size=4\u003c/code>，C4 Indexer K-cache（full-MLA 桶）+ C4 Indexer 内 compressor 的 state cache（(4,8) 桶）—— <strong>跨 group 共享同一 page size\u003c/strong>，无需 padding。"},{"label":"C4A · 37440 B","text":"<code>block_size=4\u003c/code>，C4A K-cache 与各类 compressor state cache（page <code>32832 → 37440\u003c/code> 向上对齐）。"}],"h_insight":"三个跨步骤的关键观察","insights":[{"tone":"info","title":"复用 page size，而不是统一 page size","body":"<code>8640 B\u003c/code> 同时出现在 <code>group[0]\u003c/code>（full-MLA）和 <code>group[3]\u003c/code>（(4,8) SWA）。<code>_get_kv_cache_groups_uniform_groups\u003c/code> 刻意 <em>不\u003c/em> 把它们对齐成同一个 page——保留差异、跨 group 复用同一 page 池，是 V4-Flash 跨注意力类型节省显存的核心优化。"},{"tone":"success","title":"padding 成本可控","body":"<code>22 × 3 = 66\u003c/code> 个 tensor 描述中只有 <strong>3 个\u003c/strong> <code>shared_by=[]\u003c/code>（≈ 4.5 %），全部来自 <code>_approximate_gcd\u003c/code> 在 <code>[21, 44, 21, 20]\u003c/code> 上选 <code>d = 22\u003c/code> 时的最小全局浪费。"},{"tone":"warn","title":"block size 二分：4 与 128","body":"MLA 的 <code>block_size\u003c/code> 只取 <code>4\u003c/code>（C4 主 MLA / C4 Indexer，精细）或 <code>128\u003c/code>（C128A 内 SWA，粗放）。前者服务长序列与精排、后者服务短窗口与稀疏——同一份显存上跑两套块粒度，是 DeepSeek-V4-Flash 的设计支点。"}]}},"images":{}};
 
 /* eslint-disable max-len */
 // 与 build_deepseek_v4_kv_cache_demo.py 配套；数据来自 Markdown 前置元数据注入的 DEMO。
@@ -549,6 +760,14 @@ return [mla_uniform_spec, *swa_uniform_specs]</pre>
 
 function renderStep5() {
   const C = COPY.step5;
+  const outputRows = FINAL_GROUPS.map((g) => `
+    <tr>
+      <td><code>group[${g.idx}]</code></td>
+      <td class="num">${g.layers}</td>
+      <td class="num">${g.pageSizes.join(", ")}</td>
+      <td>${g.origin}</td>
+    </tr>
+  `).join("");
   return `
     <p>${C.p1}</p>
 
@@ -636,6 +855,15 @@ function renderStep5() {
         </tr>`).join("")}
       </tbody>
     </table>
+
+    <h3 style="margin-top:22px">${C.h_output}</h3>
+    <p>${C.p_output}</p>
+    <table style="margin-top:10px">
+      <thead><tr>
+        <th>${C.th_idx}</th><th class="num">${C.th_layers}</th><th class="num">${C.th_pages}</th><th>${C.th_origin}</th>
+      </tr></thead>
+      <tbody>${outputRows}</tbody>
+    </table>
   `;
 }
 
@@ -649,17 +877,23 @@ function renderStep6() {
     tone: b.tone,
   }));
 
-
-  const totalSlots = FINAL_GROUPS.reduce((s, g) => s + g.layers, 0);
+  const chain = C.pipeline_chain
+    .map((n, i) => `
+      <div class="pipeline-node">
+        <div class="pipeline-value">${n.value}</div>
+        <div class="pipeline-label">${n.label}</div>
+        <div class="pipeline-note">${n.note}</div>
+      </div>
+      ${i < C.pipeline_chain.length - 1 ? `<div class="pipeline-arrow">→</div>` : ""}
+    `)
+    .join("");
 
   return `
-    <div class="grid grid-3">
-      <div class="stat tone-info"><div class="value">${FINAL_PAGE_SIZES.length}</div><div class="label">${C.stat_page_kinds}</div></div>
-      <div class="stat"><div class="value">${FINAL_GROUPS.length}</div><div class="label">${C.stat_num_groups}</div></div>
-      <div class="stat"><div class="value">${totalSlots}</div><div class="label">${C.stat_total_slots}</div></div>
-    </div>
+    <h3>${C.h_pipeline}</h3>
+    <p>${C.p_pipeline}</p>
+    <div class="pipeline-chain">${chain}</div>
 
-    <h3 style="margin-top:18px">${C.h_bars}</h3>
+    <h3 style="margin-top:22px">${C.h_bars}</h3>
     <p class="secondary">${C.p_bars}</p>
 
     <div class="bars">
@@ -668,6 +902,25 @@ function renderStep6() {
           <div class="bar-value">${fmtBytes(b.page)}</div>
           <div class="bar tone-${b.tone}" style="height:${Math.max(10, Math.round(b.ratio * 130))}px"></div>
           <div class="bar-label">${b.label}</div>
+        </div>
+      `).join("")}
+    </div>
+
+    <div class="bar-notes">
+      ${C.bar_notes.map((n) => `
+        <div class="bar-note-row">
+          <div class="bar-note-label">${n.label}</div>
+          <div class="bar-note-text">${n.text}</div>
+        </div>
+      `).join("")}
+    </div>
+
+    <h3 style="margin-top:22px">${C.h_insight}</h3>
+    <div class="stack-sm">
+      ${C.insights.map((c) => `
+        <div class="callout tone-${c.tone}">
+          <div class="callout-title">${c.title}</div>
+          <p>${c.body}</p>
         </div>
       `).join("")}
     </div>
@@ -685,26 +938,8 @@ function renderStepTensor() {
   );
   const kept = total - empties;
 
-  const inputRows = FINAL_GROUPS.map((g) => `
-    <tr>
-      <td><code>group[${g.idx}]</code></td>
-      <td class="num">${g.layers}</td>
-      <td class="num">${g.pageSizes.join(", ")}</td>
-      <td>${g.origin}</td>
-    </tr>
-  `).join("");
-
   return `
-    <h3>${C.h_input}</h3>
-    <p>${C.p_input}</p>
-    <table style="margin-top:10px">
-      <thead><tr>
-        <th>${C.th_idx}</th><th class="num">${C.th_layers}</th><th class="num">${C.th_pages}</th><th>${C.th_origin}</th>
-      </tr></thead>
-      <tbody>${inputRows}</tbody>
-    </table>
-
-    <p style="margin-top:18px">${C.p1}</p>
+    <p>${C.p1}</p>
 
     <h3 style="margin-top:18px">${C.h_step1}</h3>
     <p>${C.p_step1}</p>
@@ -755,63 +990,73 @@ for tuple_idx in range(num_layer_tuples):     # 22
 }
 
 function renderEmptyGrid(G) {
-  const cellStyle = (count) => {
-    if (count === 0) {
-      return "background:rgba(213,101,101,0.65);border:1px solid var(--danger);color:#fff;font-weight:600;";
+  const cellClass = (count) => {
+    if (count === 0) return "grid-cell tone-empty";
+    if (count === 1) return "grid-cell tone-one";
+    if (count === 2) return "grid-cell tone-two";
+    return "grid-cell tone-many";
+  };
+
+  const slotRules = G.slot_layers || [];
+  const layersAt = (ps, tupleIdx) => {
+    const out = [];
+    for (const r of slotRules) {
+      if (r.ps === ps && tupleIdx < r.count) {
+        out.push(`${r.prefix}[${tupleIdx}]`);
+      }
     }
-    if (count === 1) {
-      return "background:var(--bg-elev);border:1px solid var(--stroke-3);color:var(--fg-3);";
-    }
-    if (count === 2) {
-      return "background:rgba(89,156,231,0.35);border:1px solid var(--info);color:var(--fg);";
-    }
-    return "background:rgba(95,184,138,0.45);border:1px solid var(--success);color:var(--fg);";
+    return out;
+  };
+
+  const tipHtml = (ps, tupleIdx, count, names) => {
+    const header =
+      `<div class="tip-head"><code>tuple_idx=${tupleIdx}</code> · <code>page=${ps} B</code> · <strong>shared_by</strong>=${count}</div>`;
+    const body =
+      names.length === 0
+        ? `<div class="tip-empty">没有 layer 引用——空槽位，分配后立刻被释放</div>`
+        : `<ul class="tip-list">${names
+            .map((n) => `<li>${n}</li>`)
+            .join("")}</ul>`;
+    return `<div class="cell-tip">${header}${body}</div>`;
   };
 
   const headerCells = Array.from({ length: 22 }, (_, i) => `
-    <div style="text-align:center;font-size:10.5px;color:var(--fg-3);font-variant-numeric:tabular-nums;">${i}</div>
+    <div class="grid-axis-col">${i}</div>
   `).join("");
 
   const rowsHtml = G.rows.map((r) => `
-    <div style="display:grid;grid-template-columns:78px repeat(22, minmax(0, 1fr));gap:3px;align-items:center;margin-top:3px">
-      <div style="text-align:right;font-size:12px;color:var(--fg-2);padding-right:6px">
-        <code>${r.ps}</code>
-      </div>
-      ${r.counts.map((c, i) => `
-        <div title="tuple_idx=${i} · ps=${r.ps} · shared_by=${c}"
-             style="aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:11px;font-variant-numeric:tabular-nums;${cellStyle(c)}">${c}</div>
-      `).join("")}
+    <div class="grid-row">
+      <div class="grid-row-label"><code>${r.ps}</code></div>
+      ${r.counts.map((c, i) => {
+        const names = layersAt(r.ps, i);
+        return `
+          <div class="${cellClass(c)}">
+            <span class="cell-num">${c}</span>
+            ${tipHtml(r.ps, i, c, names)}
+          </div>`;
+      }).join("")}
     </div>
   `).join("");
 
-  const legendHtml = G.legend.map((l) => {
-    const swatchStyle = (() => {
-      if (l.tone === "danger") return "background:rgba(213,101,101,0.65);border:1px solid var(--danger);";
-      if (l.tone === "info") return "background:rgba(89,156,231,0.35);border:1px solid var(--info);";
-      if (l.tone === "success") return "background:rgba(95,184,138,0.45);border:1px solid var(--success);";
-      return "background:var(--bg-elev);border:1px solid var(--stroke-3);";
-    })();
-    return `
-      <div style="display:inline-flex;align-items:center;gap:6px;margin-right:14px;font-size:12px;color:var(--fg-2)">
-        <span style="display:inline-block;width:14px;height:14px;border-radius:3px;${swatchStyle}"></span>
-        <span>${l.label}</span>
-      </div>`;
-  }).join("");
+  const legendHtml = G.legend.map((l) => `
+    <div class="grid-legend-item">
+      <span class="grid-legend-swatch tone-${l.tone}"></span>
+      <span>${l.label}</span>
+    </div>`).join("");
 
   return `
     <p class="secondary" style="margin-top:10px">${G.intro_html}</p>
 
-    <div class="card" style="margin-top:12px">
-      <div class="card-body" style="overflow-x:auto">
-        <div style="min-width:640px">
-          <div style="display:grid;grid-template-columns:78px repeat(22, minmax(0, 1fr));gap:3px;align-items:end">
-            <div style="font-size:11px;color:var(--fg-3);text-align:right;padding-right:6px">
-              page \\ tuple_idx
-            </div>
+    <div class="card grid-card" style="margin-top:12px">
+      <div class="card-body grid-card-body">
+        <div class="grid-wrap">
+          <div class="grid-axis-top">tuple_idx →</div>
+          <div class="grid-header-row">
+            <div class="grid-corner">page size ↓</div>
             ${headerCells}
           </div>
           ${rowsHtml}
-          <div style="margin-top:14px;display:flex;flex-wrap:wrap">${legendHtml}</div>
+          <div class="grid-legend">${legendHtml}</div>
         </div>
       </div>
     </div>
