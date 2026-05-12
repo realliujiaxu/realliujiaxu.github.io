@@ -1,0 +1,902 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Deepseek-V4 KV Cache Layout流程演示</title>
+<style>
+  :root {
+    --bg: #141414;
+    --bg-elev: #181818;
+    --bg-card: #1c1c1c;
+    --bg-code: #0f0f0f;
+    --fg: #e4e4e4eb;
+    --fg-2: #e4e4e48d;
+    --fg-3: #e4e4e45e;
+    --fg-4: #e4e4e442;
+    --stroke-1: #e4e4e433;
+    --stroke-2: #e4e4e41f;
+    --stroke-3: #e4e4e414;
+    --accent: #599ce7;
+    --accent-soft: #599ce722;
+    --info: #599ce7;
+    --info-soft: #599ce71f;
+    --warn: #d49a4a;
+    --warn-soft: #d49a4a1f;
+    --success: #5fb88a;
+    --success-soft: #5fb88a1f;
+    --danger: #d56565;
+    --danger-soft: #d565651f;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #fcfcfc;
+      --bg-elev: #f8f8f8;
+      --bg-card: #ffffff;
+      --bg-code: #f1f1f1;
+      --fg: #141414f0;
+      --fg-2: #141414bd;
+      --fg-3: #1414148a;
+      --fg-4: #1414145c;
+      --stroke-1: #14141433;
+      --stroke-2: #1414141f;
+      --stroke-3: #14141414;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+      "Helvetica Neue", "Segoe UI", "Microsoft YaHei", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+      "Liberation Mono", monospace;
+    font-size: 0.92em;
+  }
+  code {
+    background: var(--bg-code);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--fg);
+  }
+  pre {
+    background: var(--bg-code);
+    padding: 12px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--stroke-3);
+    color: var(--fg);
+    overflow-x: auto;
+    font-size: 12.5px;
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+
+  .eyebrow {
+    color: var(--fg-3);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  h1 { font-size: 26px; font-weight: 600; margin: 6px 0 8px; letter-spacing: -0.01em; }
+  h2 { font-size: 19px; font-weight: 600; margin: 0; }
+  h3 { font-size: 15px; font-weight: 600; margin: 0; color: var(--fg-2); }
+  p { margin: 0; color: var(--fg-2); }
+
+  .subtitle { color: var(--fg-2); }
+  .divider { height: 1px; background: var(--stroke-3); border: 0; margin: 24px 0; }
+
+  .step-nav {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .pill {
+    border: 1px solid var(--stroke-2);
+    background: transparent;
+    color: var(--fg-2);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: background .12s, color .12s, border-color .12s;
+  }
+  .pill:hover { background: var(--bg-elev); color: var(--fg); }
+  .pill.active {
+    background: var(--info-soft);
+    color: var(--info);
+    border-color: var(--info);
+  }
+  .pill.tone-info { color: var(--info); border-color: var(--info); }
+  .pill.tone-info.active { background: var(--info-soft); }
+  .pill.tone-warn { color: var(--warn); border-color: var(--warn); }
+  .pill.tone-warn.active { background: var(--warn-soft); }
+  .pill.tone-success { color: var(--success); border-color: var(--success); }
+  .pill.tone-success.active { background: var(--success-soft); }
+  .pill.tone-ghost { color: var(--fg-3); }
+  .pill[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+  .step-header { display: flex; flex-direction: column; gap: 4px; }
+
+  .grid { display: grid; gap: 16px; }
+  .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  @media (max-width: 800px) {
+    .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  .stat {
+    display: flex; flex-direction: column; gap: 2px;
+    padding: 14px 16px;
+    border: 1px solid var(--stroke-3);
+    border-radius: 8px;
+    background: var(--bg-card);
+  }
+  .stat .value { font-size: 22px; font-weight: 600; color: var(--fg); letter-spacing: -0.01em; }
+  .stat .label { font-size: 12px; color: var(--fg-3); }
+  .stat.tone-info .value { color: var(--info); }
+  .stat.tone-warn .value { color: var(--warn); }
+  .stat.tone-success .value { color: var(--success); }
+
+  .card {
+    border: 1px solid var(--stroke-3);
+    border-radius: 8px;
+    background: var(--bg-card);
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--stroke-3);
+    background: var(--bg-elev);
+    font-size: 12px;
+    color: var(--fg-2);
+    font-weight: 500;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+  .tag {
+    display: inline-flex; align-items: center;
+    border: 1px solid var(--stroke-2);
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-size: 11.5px;
+    color: var(--fg-2);
+    background: transparent;
+  }
+  .tag.active { background: var(--info-soft); color: var(--info); border-color: var(--info); }
+  .tag.tone-info { background: var(--info-soft); color: var(--info); border-color: var(--info); }
+  .tag.tone-warn { background: var(--warn-soft); color: var(--warn); border-color: var(--warn); }
+  .tag.tone-success { background: var(--success-soft); color: var(--success); border-color: var(--success); }
+  .tag.tone-neutral { background: transparent; color: var(--fg-3); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-card);
+    border: 1px solid var(--stroke-3);
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 13px;
+  }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--stroke-3); }
+  th { font-weight: 500; color: var(--fg-3); background: var(--bg-elev); font-size: 12px; }
+  tr:last-child td { border-bottom: 0; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .callout {
+    border-left: 3px solid var(--info);
+    background: var(--info-soft);
+    border-radius: 6px;
+    padding: 12px 14px;
+    color: var(--fg);
+  }
+  .callout.tone-warn { border-color: var(--warn); background: var(--warn-soft); }
+  .callout.tone-success { border-color: var(--success); background: var(--success-soft); }
+  .callout .callout-title {
+    font-weight: 600; margin-bottom: 4px; color: var(--info);
+  }
+  .callout.tone-warn .callout-title { color: var(--warn); }
+  .callout.tone-success .callout-title { color: var(--success); }
+  .callout p { color: var(--fg); }
+
+  .spec-badge { display: flex; flex-direction: column; gap: 4px; }
+  .spec-badge .row1 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .spec-badge .meta { font-size: 12.5px; color: var(--fg-2); }
+  .spec-badge .meta-2 { font-size: 12px; color: var(--fg-3); }
+
+  .bars {
+    display: flex; gap: 32px; align-items: flex-end; min-height: 160px;
+    padding: 16px 0 8px;
+    border-bottom: 1px dashed var(--stroke-3);
+  }
+  .bar-col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .bar {
+    width: 88px;
+    border: 1px solid var(--stroke-1);
+    border-radius: 4px;
+    background: var(--bg-elev);
+  }
+  .bar.tone-success { background: rgba(95, 184, 138, 0.5); border-color: var(--success); }
+  .bar.tone-info { background: rgba(89, 156, 231, 0.35); border-color: var(--info); }
+  .bar.tone-warn { background: rgba(212, 154, 74, 0.30); border-color: var(--warn); }
+  .bar-label { font-size: 12px; color: var(--fg-2); }
+  .bar-value { font-size: 12.5px; font-weight: 600; }
+
+  .bottom-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 20px;
+  }
+  .stack { display: flex; flex-direction: column; gap: 16px; }
+  .stack-sm { display: flex; flex-direction: column; gap: 8px; }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .muted { color: var(--fg-3); font-size: 12.5px; }
+  .small { font-size: 12.5px; }
+  .secondary { color: var(--fg-2); }
+  .tertiary { color: var(--fg-3); }
+  .strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="eyebrow">vllm/v1/core/kv_cache_utils.py · DeepSeek-V4-Flash</div>
+  <h1>Deepseek-V4 KV Cache Layout流程演示</h1>
+  <p class="subtitle">
+分步演示 DeepSeek-V4 的 KV cache 分组流程：168 个原始
+<code>KVCacheSpec</code> 条目如何经过分桶、对齐与切分，最终归并成
+3 种 page size、5 个 <code>KVCacheGroupSpec</code> 的物理布局。
+点击上方任一步骤即可跳转。
+<br/><span class="muted">引用代码来自 vLLM <code>v0.20.2</code>。</span>
+  </p>
+
+  <hr class="divider" />
+
+  <nav class="step-nav" id="stepNav"></nav>
+
+  <hr class="divider" />
+
+  <header class="step-header" id="stepHeader"></header>
+
+  <div id="stepBody" class="stack" style="margin-top: 18px;"></div>
+
+  <hr class="divider" />
+
+  <div class="bottom-nav">
+    <button class="pill" id="prevBtn">← 上一步</button>
+    <span class="muted" id="stepCounter"></span>
+    <button class="pill tone-info active" id="nextBtn">下一步 →</button>
+  </div>
+</div>
+
+<script>
+// 由 /tmp/trace_deepseek_v4_kv_cache.py 实际运行产线代码验证，逐字节一致
+const DEMO = {"meta":{"page_title":"Deepseek-V4 KV Cache Layout流程演示","eyebrow":"vllm/v1/core/kv_cache_utils.py · DeepSeek-V4-Flash","h1":"Deepseek-V4 KV Cache Layout流程演示","subtitle_html":"分步演示 DeepSeek-V4 的 KV cache 分组流程：168 个原始\n<code>KVCacheSpec\u003c/code> 条目如何经过分桶、对齐与切分，最终归并成\n3 种 page size、5 个 <code>KVCacheGroupSpec\u003c/code> 的物理布局。\n点击上方任一步骤即可跳转。\n<br/><span class=\"muted\">引用代码来自 vLLM <code>v0.20.2\u003c/code>。\u003c/span>\n"},"nav":{"prev":"← 上一步","next":"下一步 →"},"data_note":"由 /tmp/trace_deepseek_v4_kv_cache.py 实际运行产线代码验证，逐字节一致","steps":[{"id":0,"title":"High Level Idea","subtitle":"三类 Attention · 三种 page size · 五个 group"},{"id":1,"title":"准备","subtitle":"168 个 KVCacheSpec 原始条目"},{"id":2,"title":"按 spec 类型分桶","subtitle":"Full Attention 单桶 + SWA 按 (block, sw) 多桶"},{"id":3,"title":"Uniform 封装","subtitle":"from_specs → 4 个 UniformTypeKVCacheSpecs · group[0] 必为 full-MLA"},{"id":4,"title":"Group 层数对齐","subtitle":"对齐 num_layer_tuples + page padding"},{"id":5,"title":"物理 tensor 分配","subtitle":"KVCacheTensor 描述 · worker 端 torch.zeros"},{"id":6,"title":"最终结果","subtitle":"3 种 page size · 5 个 KVCacheGroupSpec"}],"input_specs":[{"kind":"MLA","block":256,"sw":null,"head":132,"pageBytes":8640,"cr":4,"layers":21,"label":"C4 Indexer K cache（C4I）","source":"DeepseekV4IndexerCache"},{"kind":"MLA","block":256,"sw":null,"head":512,"pageBytes":37440,"cr":4,"layers":21,"label":"C4 主 MLA（C4A）","source":"DeepseekV4MLAAttention"},{"kind":"MLA","block":256,"sw":null,"head":512,"pageBytes":1728,"cr":128,"layers":20,"label":"C128 主 MLA（C128A）","source":"DeepseekV4MLAAttention"},{"kind":"SWA","block":64,"sw":128,"head":512,"pageBytes":37440,"cr":1,"layers":44,"label":"SWA 缓存（每层都有）","source":"DeepseekV4SWACache"},{"kind":"SWA","block":4,"sw":8,"head":2048,"pageBytes":32832,"cr":1,"layers":21,"label":"C4 主 MLA 的 compressor 状态","source":"DeepseekCompressor.state_cache"},{"kind":"SWA","block":4,"sw":8,"head":512,"pageBytes":8640,"cr":1,"layers":21,"label":"C4 Indexer 内的 compressor 状态","source":"DeepseekCompressor.state_cache"},{"kind":"SWA","block":8,"sw":128,"head":1024,"pageBytes":32832,"cr":1,"layers":20,"label":"C128 主 MLA 的 compressor 状态","source":"DeepseekCompressor.state_cache"}],"total_layers":44,"groups_after":[{"idx":0,"role":"FULL_MLA","layers":62,"blocks":[256],"sws":[null],"crs":[4,128],"pageSizes":[1728,8640,37440],"contents":"21 C4I + 21 C4A + 20 C128A"},{"idx":1,"role":"SWA_MLA","layers":44,"blocks":[64],"sws":[128],"crs":[1],"pageSizes":[37440],"contents":"44 个 SWA cache（每个模型层一个）"},{"idx":2,"role":"SWA_MLA","layers":42,"blocks":[4],"sws":[8],"crs":[1],"pageSizes":[8640,32832],"contents":"21 C4 主 MLA compressor 状态 + 21 C4 Indexer compressor 状态"},{"idx":3,"role":"SWA_MLA","layers":20,"blocks":[8],"sws":[128],"crs":[1],"pageSizes":[32832],"contents":"20 个 C128 主 MLA compressor 状态"}],"final_groups":[{"idx":0,"layers":62,"pageSizes":[1728,8640,37440],"origin":"full-MLA（未切分）"},{"idx":1,"layers":22,"pageSizes":[37440],"origin":"SWA cache，子组 1 / 2"},{"idx":2,"layers":22,"pageSizes":[37440],"origin":"SWA cache，子组 2 / 2"},{"idx":3,"layers":42,"pageSizes":[8640,37440],"origin":"(4,8) 桶：21 indexer state (8640) + 21 mla state (padding 32832→37440)"},{"idx":4,"layers":20,"pageSizes":[37440],"origin":"C128 compressor 状态（page 32832 → 37440）"}],"final_page_sizes":[1728,8640,37440],"bars":[{"label":"C128A","page":1728,"tone":"warn"},{"label":"C4I","page":8640,"tone":"info"},{"label":"C4A","page":37440,"tone":"success"}],"padding_table_rows":[{"group":"group[1] (64,128)","source":"44 SWA cache","orig":37440,"cand":37440,"aligned":37440,"waste":0,"rowspan":1},{"group":"group[2] (4,8)","source":"21 C4 主 MLA comp. 状态","orig":32832,"cand":37440,"aligned":37440,"waste":4608,"rowspan":2},{"group":"","source":"21 C4 Indexer comp. 状态","orig":8640,"cand":8640,"aligned":8640,"waste":0,"rowspan":0},{"group":"group[3] (8,128)","source":"20 C128 主 MLA comp. 状态","orig":32832,"cand":37440,"aligned":37440,"waste":4608,"rowspan":1}],"tuple_split_rows":[{"name":"full-MLA（group[0]）","orig_t":21,"align_t":22,"split":"1 组","sub_size":62},{"name":"SWA cache（44 层）","orig_t":44,"align_t":44,"split":"2 组","sub_size":22},{"name":"(4,8) 桶（42 层 = 21 主 + 21 indexer）","orig_t":21,"align_t":22,"split":"1 组","sub_size":42},{"name":"C128 主 compressor 状态","orig_t":20,"align_t":22,"split":"1 组","sub_size":20}],"copy":{"high_level":{"intro_html":"DeepSeek-V4 是一个使用了三种 Attention 的混合模型：<strong>SWA\u003c/strong>（Sliding Window Attention）、\n<strong>CSA\u003c/strong>（Compressed Sparse Attention）和 <strong>HCA\u003c/strong>（Heavily Compressed Attention），\n因此需要缓存多种 KV cache。\n","cache_kinds_html":"<ul>\n  <li><strong>SWA\u003c/strong>：所有层都有 SWA 分支，每层缓存 <code>sliding_window\u003c/code> 长度个 token。\n    以 Flash 版本为例，共 43 层 SWA KV cache；开启 MTP 时再多 1 层。\u003c/li>\n  <li><strong>CSA\u003c/strong>：\n    <ul>\n      <li><span style=\"color:#599ce7\"><strong>C4 KV-Cache\u003c/strong>\u003c/span>：按 compress_ratio=4 压缩后的 KV cache\u003c/li>\n      <li>C4 Compressor State Cache：需要缓存 <code>coff × compressed_ratio\u003c/code> 个 token 的 KV 与 score；C4 的 coff=2\u003c/li>\n      <li><span style=\"color:#5fb88a\"><strong>C4 Indexer KV-Cache\u003c/strong>\u003c/span>：Indexer 的 Key Cache，同样按 compress_ratio=4 压缩\u003c/li>\n      <li>C4 Indexer Compressor State Cache：Lighting Indexer 内部也有一个 compressor，coff=2\u003c/li>\n    \u003c/ul>\n  \u003c/li>\n  <li><strong>HCA\u003c/strong>：\n    <ul>\n      <li><span style=\"color:#599ce7\"><strong>C128 KV-Cache\u003c/strong>\u003c/span>：按 compress_ratio=128 压缩后的 KV cache\u003c/li>\n      <li>C128 Compressor State Cache：coff=1\u003c/li>\n    \u003c/ul>\n  \u003c/li>\n\u003c/ul>\n","image1_url":"https://liujiaxu-pic.oss-cn-beijing.aliyuncs.com/QQ_1778546929833.png","image1_alt":"C4 MLA + Indexer 结构","image2_url":"https://liujiaxu-pic.oss-cn-beijing.aliyuncs.com/QQ_1778547159897.png","image2_alt":"C128 + Compressor 结构","scheme_intro_html":"每种 cache 占用的存储空间差别很大，强行放进同一种 page size 的 KV cache tensor 会出现大量 padding，浪费 HBM。\n因此 vLLM 团队在\n<a href=\"https://github.com/vllm-project/vllm/pull/40860\" target=\"_blank\" rel=\"noopener\">PR #40860 [Feat] DeepSeek V4 Rebased\u003c/a>\n中提出了多种 page size 的方案：划分<strong>大、中、小三种 page size\u003c/strong>\n的 KV cache tensor，分别承载对应大小的 cache。整体方案如下：\n","image3_url":"https://liujiaxu-pic.oss-cn-beijing.aliyuncs.com/0506da8e-46ac-4ec1-9c24-dca6a236e702.png","image3_alt":"三种 page size 整体分组方案","image3_credit_html":"图片来自：\n<a href=\"https://drive.google.com/drive/folders/1Sb8Bqrz9rXU3GJOSerXBj5IDbftyFZMt\" target=\"_blank\" rel=\"noopener\">Google Drive\u003c/a>\n","classes_html":"<ul>\n  <li><strong>Full Attention 类\u003c/strong>：cache 随序列长度<strong>线性增加\u003c/strong>，包括\n    <span style=\"color:#599ce7\"><strong>C4 KV-Cache\u003c/strong>\u003c/span>、\n    <span style=\"color:#5fb88a\"><strong>C4 Indexer KV-Cache\u003c/strong>\u003c/span> 和\n    <span style=\"color:#599ce7\"><strong>C128 KV-Cache\u003c/strong>\u003c/span>。此类没有 padding，没有显存浪费。\u003c/li>\n  <li><strong>SWA 类\u003c/strong>：相对 Full Attention 而言，每条请求占用<strong>近似固定\u003c/strong>的显存，\n    包括所有 SWA KV cache 和所有 Compressor State（C4 Compressor State、C4 Indexer Compressor State、C128 Compressor State）。\n    此类存在一定 padding 浪费。\u003c/li>\n\u003c/ul>\n<ul>\n  <li>横向为同一个物理 KV cache tensor\u003c/li>\n  <li>纵向为同一个 group，使用相同的 block ID\u003c/li>\n\u003c/ul>\n","callout_title":"代码中真实的分组","callout_table_html":"<table>\n  <thead><tr>\n    <th>Group\u003c/th>\n    <th>1 · Full Attention\u003c/th>\n    <th>2 &amp; 3 · SWA\u003c/th>\n    <th>4 · C4 Compressor State\u003c/th>\n    <th>5 · C128 Compressor State\u003c/th>\n  \u003c/tr>\u003c/thead>\n  <tbody>\n    <tr><td>大 page size\u003c/td><td>C4 KV-Cache\u003c/td><td>SWA KV-Cache\u003c/td><td>C4 State-Cache\u003c/td><td>C128 State-Cache\u003c/td>\u003c/tr>\n    <tr><td>中 page size\u003c/td><td>C4 Indexer KV\u003c/td><td>Padding\u003c/td><td>C4 Indexer Score\u003c/td><td>Padding\u003c/td>\u003c/tr>\n    <tr><td>小 page size\u003c/td><td>C128 KV-Cache\u003c/td><td>Padding\u003c/td><td>Padding\u003c/td><td>Padding\u003c/td>\u003c/tr>\n  \u003c/tbody>\n\u003c/table>\n"},"step0":{"stat_model_layers":"模型层（43 隐藏 + 1 MTP）","stat_kv_entries":"KVCacheSpec 条目","stat_mla_entries":"MLAAttentionSpec 条目","stat_swa_entries":"SlidingWindowMLASpec 条目","intro":"每层的 spec 由 <code>vllm/model_executor/layers/deepseek_v4_attention.py\u003c/code>\n与 <code>deepseek_compressor.py\u003c/code> 里 4 个类按\n<code>compress_ratios[layer_id]\u003c/code> 产出：21 个 C4 层、20 个 C128 层、3 个 SWA-only 层。\n","table_title":"KVCacheSpec汇总","table_head_spec":"Spec 类","table_head_block":"block_size","table_head_sw":"sliding_window","table_head_head":"head_size","table_head_cr":"compress_ratio","table_head_page":"page_size_bytes","table_head_layers":"# 层","table_head_source":"来源类","callout_168_title":"为什么有 168 个KVCacheSpec","callout_168_body":"每个模型层都有 SWA cache（44 个）。C4 层（21 个）额外创建 主 MLA + 主 MLA 的 compressor 状态 +\nIndexer K-cache + <strong>Indexer 内 compressor 的 state cache\u003c/strong>（4 个/层）；\nC128 层（20 个）额外创建 主 MLA + 主 MLA 的 compressor 状态（2 个/层，没有 Indexer）；\nSWA-only 层（compress_ratio = 0，共 3 个）只有 SWA cache。\n合计 = 44 + 21×4 + 20×2 = <strong>168\u003c/strong>。\n","spec_badge_suffix_layers":"个层","spec_badge_suffix_source":"来源"},"step2":{"p1":"遍历所有 spec：<code>SlidingWindowMLASpec\u003c/code> 按\n<code>(block_size, sliding_window)\u003c/code> 进入嵌套字典分桶；<code>MLAAttentionSpec\u003c/code>\n不管 head/cr 一律塞进同一个 <code>mla_specs\u003c/code> 桶。\n","p_spec_two_kinds":"<code>KVCacheSpec\u003c/code> 在这里被分成两类：<strong>Full Attention\u003c/strong> 类\n（对应 <code>MLAAttentionSpec\u003c/code>），KV 随序列长度<strong>线性\u003c/strong>增长；\n<strong>SWA\u003c/strong> 类（对应 <code>SlidingWindowMLASpec\u003c/code>），在滑动窗口与块大小固定时，\n每条请求在该 cache 上的占用由窗口上界决定，可视为<strong>近似固定显存\u003c/strong>（不会像 full attention 那样随序列长度一直涨）。\n","code_ref":"vllm/v1/core/kv_cache_utils.py · L1432-L1436","mla_card_title":"mla_specs（单桶）","mla_card_tag":"62 层","mla_card_footer":"这个桶内的 page size 并不统一：<code>1728\u003c/code>、<code>8640\u003c/code>、<code>37440\u003c/code> B 三种共存。","swa_card_title":"grouped_swa_mla_specs（按 (block, sw) 分桶）","swa_card_tag":"3 桶 · 106 层","key_prefix":"key = ","callout_warn_title":"注意 (4, 8) 桶里其实有两类层","callout_warn_body":"C4 层的主 MLA 和 Indexer 内部各自跑了一个 <code>DeepseekCompressor\u003c/code>，\n两个 compressor 的 state cache 都用 <code>(block=4, sw=8)\u003c/code>，但\n<code>head_size\u003c/code> 不同（2048 vs 512），最终 page size 也不同\n（32832 B vs 8640 B）。源码注释把这个桶叫 \"C4I + C4A\"，确认这是有意为之——\nIndexer 的 state 故意挑同样的 (block, sw)，以便和 Indexer K cache 共享物理 tensor。\n"},"step3":{"p1":"每个桶通过 <code>UniformTypeKVCacheSpecs.from_specs\u003c/code> 包装。这里的\n\"uniform\" 只表示\"spec 类相同\"——包装内部允许各层 page size 不同，\n这正是 DeepSeek-V4 节省显存的关键。\n","code_ref":"vllm/v1/core/kv_cache_utils.py · L1438-L1448","callout_order_title":"顺序很关键","callout_order_body":"返回的列表是 <code>[mla_uniform_spec, *swa_uniform_specs]\u003c/code>。\n下游 <code>_get_kv_cache_groups_uniform_groups\u003c/code> 硬编码假设\n<code>grouped_specs[0]\u003c/code> 一定是 full-MLA group，并把它的\n<code>get_page_sizes()\u003c/code> 当作所有其它组必须对齐到的\"标准桶集合\"。\n","h_groups":"封装结果：4 个 UniformTypeKVCacheSpecs","lead":"函数返回时，得到 4 个 <code>UniformTypeKVCacheSpecs\u003c/code>：","stat_layers_label":"# 层","stat_num_pages_label":"不同 page size 数","callout_inner_title":"注意每个组的内部异构","callout_inner_body":"group[0] 有 62 层却包含<strong>三种\u003c/strong>不同的 page size（1728 / 8640 / 37440）；\ngroup[2] (4,8) 也有<strong>两种\u003c/strong> page size（8640 / 32832），因为 C4 主 MLA 和 C4 Indexer\n各自的 compressor 都落进了这个桶。函数刻意<em>不去统一\u003c/em> page size——\n保留每层的 page size 差异正是优化点。\n"},"step5":{"p1":"<code>_get_kv_cache_groups_uniform_groups\u003c/code> 拿到 4 个\n<code>UniformTypeKVCacheSpecs\u003c/code> 后，做两件事来对齐最终\n<code>KVCacheTensor\u003c/code> 布局。\n","callout_what_title":"先解释一下：layer-tuple 是什么","callout_what_body":"一个 <code>UniformTypeKVCacheSpecs\u003c/code> 里可以同时有几种 page size\n（例如 full-MLA group 同时存在 <code>1728 / 8640 / 37440\u003c/code> 三种）。\n把每种 page size 中\"按顺序对应\"的 1 个 layer 凑成一组，这一组就是 1 个 <strong>layer-tuple\u003c/strong>，\n它们在物理上将<strong>共享同一份 block table\u003c/strong>、占用同一个 tuple 槽位。\n<br/>\n<code>UniformTypeKVCacheSpecs.get_num_layer_tuples()\u003c/code>（<code>vllm/v1/kv_cache_interface.py\u003c/code>\n<code>L712-L715\u003c/code>）取的是该 group 里<strong>最常见 page size 的层数\u003c/strong>，作为该 group 的 tuple 总数。\n<br/>\n举例：full-MLA group 有 21 个 C4A（page=37440）+ 21 个 C4I（page=8640）+ 20 个 C128A（page=1728），\n最常见 page size 的层数 = 21，所以 <code>num_layer_tuples = 21\u003c/code>（少出来的那 1 个 C128A 槽位用 padding 顶上）。\nSWA group 每组只有 1 种 page size，<code>num_layer_tuples\u003c/code> 就等于该 group 的层数。\n","h_pad":"① 把 SWA page 向上对齐到 full-MLA 桶","p_pad":"每个 SWA-MLA 层的 page 向上取整到 <code>full_mla.get_page_sizes()\u003c/code> 里\"最近且不小于\"的那个值。\n注意 (4,8) 桶里有 <strong>两种\u003c/strong> page size，会各自找各自的候选。\n","th_group":"SWA 组","th_source":"来源层","th_orig":"原 page (B)","th_cand":"候选","th_aligned":"对齐后 (B)","th_waste":"每页浪费","h_tuple":"② 选定 num_layer_tuples 并切组","p_tuple":"各组 layer-tuple 数原本是 <code>[21, 44, 21, 20]\u003c/code>——注意 (4,8) 桶虽然有 42 层，\n但 <code>get_num_layer_tuples\u003c/code> 取的是\"最常见 page size 的层数\"，所以仍然是 21。\n<code>_approximate_gcd\u003c/code> 选定 <code>num_layer_tuples = 22\u003c/code>，因为它能让全局上取整 padding 最小。\n","th_grp":"组","th_orig_t":"原 tuple 数","th_align_t":"向上对齐到","th_split":"切成","th_sub":"每个子组大小","callout_gcd_title":"为什么是 num_layer_tuples = 22","callout_gcd_body":"当 d = 22 时，padding = (22−21) + (44−44) + (22−21) + (22−20) = 1 + 0 + 1 + 2 = 4，\n这是全局最小值。如果取更大的 d（比如 44），所有组都得分配 44 个 tuple，预留量会膨胀约 3 倍。\n","h_algo":"③ _approximate_gcd 怎么挑出 d = 22","p_algo":"目标函数是「把每个 group 的 layer-tuple 数向上对齐到 d 的倍数后，全局浪费的 tuple 槽位之和」：\n<code>pad(d) = Σ<sub>i\u003c/sub> ((d − x<sub>i\u003c/sub> mod d) mod d)\u003c/code>。\n搜索区间是 <code>d ∈ [lower_bound, max(x<sub>i\u003c/sub>)]\u003c/code>，\n其中 <code>lower_bound = x<sub>0\u003c/sub>\u003c/code> = full-MLA group 的 <code>num_layer_tuples\u003c/code>（本例为 21）。\n暴力枚举每个 d，挑 <code>pad\u003c/code> 最小的；<strong>平手时偏好更大的 d\u003c/strong>——\n因为 d 越大，下游 <code>cdiv(num_layers_per_size, d)\u003c/code> 切出来的子组就越少，\n调度时遍历 group 的开销更低。\n","code_ref_algo":"vllm/v1/core/kv_cache_utils.py · L1462-L1483","h_algo_table":"在 values=[21, 44, 21, 20] 上的枚举（部分）","p_algo_table_intro":"具体到 DeepSeek-V4-Flash，输入是封装步骤产出的 4 个 group 各自的 <code>num_layer_tuples\u003c/code>。\n下表列出几个有代表性的 d，单元格里是「该 group 上取整到 d 倍数后浪费的 tuple 数」。\n","th_alg_d":"d","th_alg_pad0":"21 → ⌈21/d⌉·d (full-MLA)","th_alg_pad1":"44 → ⌈44/d⌉·d (SWA cache)","th_alg_pad2":"21 → ⌈21/d⌉·d ((4,8) 桶)","th_alg_pad3":"20 → ⌈20/d⌉·d ((8,128) 桶)","th_alg_sum":"总 padding","th_alg_note":"备注","algo_table_rows":[{"d":21,"pads":[0,19,0,1],"sum":20,"best":false,"note":"44 mod 21 = 2，要再补 19；离最优很远"},{"d":22,"pads":[1,0,1,2],"sum":4,"best":true,"note":"全局最小，且大于 lower_bound=21"},{"d":23,"pads":[2,2,2,3],"sum":9,"best":false,"note":""},{"d":24,"pads":[3,4,3,4],"sum":14,"best":false,"note":""},{"d":25,"pads":[4,6,4,5],"sum":19,"best":false,"note":"随 d 增大 padding 整体抬升"},{"d":44,"pads":[23,0,23,24],"sum":70,"best":false,"note":"所有组都补到 44，预留量约 3×"}]},"step_tensor":{"num_layer_tuples":22,"h_input":"输入：5 个 KVCacheGroupSpec","p_input":"这是上一步对齐之后的产物——切完组、做完 page padding 的 5 个\n<code>KVCacheGroupSpec\u003c/code>。下面的 <code>_get_kv_cache_config_deepseek_v4\u003c/code>\n就是基于它们来生成物理 tensor 描述符的。\n","th_idx":"#","th_layers":"# 层","th_pages":"page sizes (B)","th_origin":"来源","p1":"上一步切完组之后，每个 <code>KVCacheGroupSpec\u003c/code> 里的 layer 已经按 page size 分好桶\n（例如 group[0] 有三个桶：<code>1728 / 8640 / 37440\u003c/code> 各一摞 layer 名）。\n<code>_get_kv_cache_config_deepseek_v4\u003c/code> 要做的事很具体：\n<strong>把所有 group 在「同一个 tuple 槽位 + 同一种 page size」上的 layer 汇总到同一条\n<code>KVCacheTensor\u003c/code>\u003c/strong>——这些 layer 后续将共享同一份物理 buffer 与同一份 block table。\n<br/>\n每条 <code>KVCacheTensor\u003c/code> 只有两个字段：<code>size\u003c/code>（这块 buffer 总字节数 =\n<code>page_size × num_blocks\u003c/code>）和 <code>shared_by\u003c/code>（用这块 buffer 的所有 layer 名）。\n最终一共 emit <code>num_layer_tuples × len(page_sizes) = 22 × 3 = 66\u003c/code> 条描述符，\nworker 拿到后再真正调 <code>torch.zeros\u003c/code> 向 GPU 申请显存。\n","h_step1":"① 构造 KVCacheTensor 描述符（scheduler 端）","p_step1":"在 scheduler 端遍历 <code>num_layer_tuples × page_sizes\u003c/code> 的笛卡尔积，\n每个 (tuple_idx, page_size) 槽位 emit 一条 <code>KVCacheTensor\u003c/code>，\n<code>shared_by\u003c/code> 收集所有 group 在该槽位上的 layer 名字——\n这些 layer 后续将<strong>共享同一份物理 tensor\u003c/strong>。\n","code_ref1":"vllm/v1/core/kv_cache_utils.py · L1216-L1226","h_step2":"② Worker 真正分配显存","p_step2":"worker 启动后遍历 <code>kv_cache_config.kv_cache_tensors\u003c/code>，\n每个描述符调一次 <code>torch.zeros(size, dtype=torch.int8)\u003c/code>——\n<strong>先按字节级 int8 分配\u003c/strong>，稍后 <code>_reshape_kv_cache\u003c/code>\n再按各层 dtype <code>view\u003c/code> 成 <code>[num_blocks, block_size, ...]\u003c/code>。\n<br/>\n<span class=\"muted\">实现有两份完全等价的拷贝：<code>vllm/v1/worker/gpu/attn_utils.py::_allocate_kv_cache\u003c/code>\n与 <code>vllm/v1/worker/gpu_model_runner.py::_allocate_kv_cache_tensors\u003c/code>。\u003c/span>\n","code_ref2":"vllm/v1/worker/gpu/attn_utils.py · L128-L142","h_count":"③ DeepSeek-V4-Flash 一共分配多少个？","p_count":"<strong>公式：\u003c/strong>物理 tensor 数 = <code>num_layer_tuples × len(page_sizes)\u003c/code>。\n代入 <strong>22 × 3 = 66\u003c/strong> 个 <code>KVCacheTensor\u003c/code> 描述符，\n对应 <strong>66 次 <code>torch.zeros\u003c/code> 调用\u003c/strong>。\n但其中有 3 个 <code>shared_by=[]\u003c/code> 的\"空槽位\"——没有任何 layer 引用它们，\n分配出来当场被 Python GC 回收，所以<strong>实际持久存活 63 个\u003c/strong>物理 tensor。\n","stat_num_tuples_label":"num_layer_tuples","stat_num_ps_label":"page size 数","stat_total_label":"KVCacheTensor 总数","stat_kept_label":"实际持久存活","h_empty":"三个空槽位（shared_by = []）","p_empty":"8640 page 出现在 group[0]（21 个 C4 Indexer K-cache）和 group[3]（21 个 Indexer compressor state），\ntuple_idx=21 两边都已经用完；1728 page 只在 group[0] 出现，且仅 20 个 C128A，\ntuple_idx ∈ {20, 21} 已越界。它们本质上是\"对齐 <code>num_layer_tuples = 22\u003c/code>\n付出的代价\" 在 tensor 维度上的体现。\n","empty_grid":{"intro_html":"把 66 个 <code>KVCacheTensor\u003c/code> 摊成 <strong>3 行（page size）× 22 列（tuple_idx）\u003c/strong> 的矩阵——\n每格的数字是该槽位上 <code>shared_by\u003c/code> 的长度（多少个 layer 共享这块物理 tensor）。\n<span style=\"color: var(--danger); font-weight: 600;\">红色 = 0（空槽位）\u003c/span>共 3 个，\n矩阵右下角自然形成一个\"<strong>缺角\u003c/strong>\"。\n<br/>\n这 3 个槽位的字节数已经在<strong>预算公式\u003c/strong>\n<code>num_blocks = available_memory ÷ (Σ page_sizes × num_layer_tuples)\u003c/code>\n里被一并扣除——也就是说，因为要把 8640 / 1728 的层数也按 <code>num_layer_tuples = 22\u003c/code> 来算，\n总预算被它们\"占了名额\"，<code>num_blocks\u003c/code> 因此变小了。\nworker 启动时仍会照常 <code>torch.zeros\u003c/code> 申请显存；之后由于没有 layer 引用，\nPython 对象会被销毁，那段 CUDA 内存归还给 PyTorch caching allocator，\n是否被复用取决于后续 alloc 模式。\n","rows":[{"ps":37440,"counts":[5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4,2]},{"ps":8640,"counts":[2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0]},{"ps":1728,"counts":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0]}],"legend":[{"tone":"danger","label":"= 0（空，无 layer 引用）"},{"tone":"neutral","label":"= 1"},{"tone":"info","label":"= 2"},{"tone":"success","label":"≥ 3"}]}},"step6":{"stat_page_kinds":"不同的 page size 种数","stat_num_groups":"最终 KVCacheGroupSpec 数","stat_total_slots":"总 layer 槽位","h_bars":"3 种 KV cache tensor 的 page size","p_bars":"来自 <code>full_mla.get_page_sizes()\u003c/code>。\n<code>_get_kv_cache_config_deepseek_v4\u003c/code> 产出的每个\n<code>KVCacheTensor\u003c/code>，其每个 block 的大小必定是这 3 个之一。\n注意 <code>8640\u003c/code> B 同时被两类层用到——C4 Indexer K-cache（full-MLA 桶）\n和 C4 Indexer 内 compressor 的 state cache（(4,8) 桶）。"}},"images":{}};
+
+/* eslint-disable max-len */
+// 与 build_deepseek_v4_kv_cache_demo.py 配套；数据来自 Markdown 前置元数据注入的 DEMO。
+
+const STEPS = DEMO.steps;
+const INPUT_SPECS = DEMO.input_specs;
+const GROUPS_AFTER = DEMO.groups_after;
+const FINAL_GROUPS = DEMO.final_groups;
+const FINAL_PAGE_SIZES = DEMO.final_page_sizes;
+const TOTAL_LAYERS = DEMO.total_layers;
+const TOTAL_SPECS = INPUT_SPECS.reduce((s, r) => s + r.layers, 0);
+const COPY = DEMO.copy;
+const PADDING_ROWS = DEMO.padding_table_rows;
+const TUPLE_ROWS = DEMO.tuple_split_rows;
+const BARS_CFG = DEMO.bars;
+
+function fmtBytes(n) {
+  if (n >= 1024) return (n / 1024).toFixed(2) + " KiB";
+  return n + " B";
+}
+function fmtSw(sw) { return sw === null ? "—" : String(sw); }
+function fmtCr(cr) { return cr === null ? "—" : String(cr); }
+
+function tag(kind) {
+  return kind === "MLA"
+    ? `<span class="tag tone-info active">MLAAttentionSpec</span>`
+    : `<span class="tag tone-warn active">SlidingWindowMLASpec</span>`;
+}
+
+function specBadge(s) {
+  const L = COPY.step0;
+  return `
+    <div class="spec-badge">
+      <div class="row1">
+        ${tag(s.kind)}
+        <span class="strong small">${s.label}</span>
+      </div>
+      <div class="meta">
+        block <code>${s.block}</code> · sw <code>${fmtSw(s.sw)}</code>
+        · head <code>${s.head}</code> · cr <code>${fmtCr(s.cr)}</code>
+      </div>
+      <div class="meta-2">
+        page <code>${fmtBytes(s.pageBytes)}</code> · ${s.layers} ${L.spec_badge_suffix_layers}
+        · ${L.spec_badge_suffix_source} <code>${s.source}</code>
+      </div>
+    </div>
+  `;
+}
+
+function renderPaddingTable() {
+  return PADDING_ROWS.map((r) => {
+    const body = `
+        <td>${r.source}</td>
+        <td class="num">${r.orig}</td>
+        <td class="num">${r.cand}</td>
+        <td class="num">${r.aligned}</td>
+        <td class="num">${r.waste}</td>`;
+    if (r.rowspan === 0) {
+      return `<tr>${body}</tr>`;
+    }
+    const gc = r.rowspan > 1
+      ? `<td rowspan="${r.rowspan}">${r.group}</td>`
+      : `<td>${r.group}</td>`;
+    return `<tr>${gc}${body}</tr>`;
+  }).join("");
+}
+
+function renderTupleTable() {
+  return TUPLE_ROWS.map((r) => `
+        <tr><td>${r.name}</td><td class="num">${r.orig_t}</td><td class="num">${r.align_t}</td>
+        <td>${r.split}</td><td class="num">${r.sub_size}</td></tr>`).join("");
+}
+
+function renderHighLevel() {
+  const C = COPY.high_level;
+  return `
+    <p>${C.intro_html}</p>
+    ${C.cache_kinds_html}
+
+    <div class="grid grid-2" style="margin-top:14px">
+      <div style="text-align:center">
+        <img src="${C.image1_url}" alt="${C.image1_alt}"
+             style="max-width:100%;border:1px solid var(--stroke-3);border-radius:6px;background:var(--bg-card)">
+      </div>
+      <div style="text-align:center">
+        <img src="${C.image2_url}" alt="${C.image2_alt}"
+             style="max-width:100%;border:1px solid var(--stroke-3);border-radius:6px;background:var(--bg-card)">
+      </div>
+    </div>
+
+    <p style="margin-top:18px">${C.scheme_intro_html}</p>
+
+    <div style="text-align:center;margin:14px 0 6px">
+      <img src="${C.image3_url}" alt="${C.image3_alt}"
+           style="max-width:100%;border:1px solid var(--stroke-3);border-radius:6px;background:var(--bg-card)">
+    </div>
+    <p class="muted" style="text-align:center">${C.image3_credit_html}</p>
+
+    ${C.classes_html}
+
+    <div class="callout" style="margin-top:18px">
+      <div class="callout-title">${C.callout_title}</div>
+      ${C.callout_table_html}
+    </div>
+  `;
+}
+
+function renderStep0() {
+  const C = COPY.step0;
+  const mlaCount = INPUT_SPECS.filter((s) => s.kind === "MLA").reduce((a, b) => a + b.layers, 0);
+  const swaCount = INPUT_SPECS.filter((s) => s.kind === "SWA").reduce((a, b) => a + b.layers, 0);
+  const rows = INPUT_SPECS.map((s) => `
+    <tr>
+      <td>${tag(s.kind)}</td>
+      <td class="num">${s.block}</td>
+      <td class="num">${fmtSw(s.sw)}</td>
+      <td class="num">${s.head}</td>
+      <td class="num">${fmtCr(s.cr)}</td>
+      <td class="num"><code>${fmtBytes(s.pageBytes)}</code></td>
+      <td class="num">${s.layers}</td>
+      <td><code>${s.source}</code></td>
+    </tr>
+  `).join("");
+
+  return `
+    <div class="grid grid-4">
+      <div class="stat"><div class="value">${TOTAL_LAYERS}</div><div class="label">${C.stat_model_layers}</div></div>
+      <div class="stat"><div class="value">${TOTAL_SPECS}</div><div class="label">${C.stat_kv_entries}</div></div>
+      <div class="stat tone-info"><div class="value">${mlaCount}</div><div class="label">${C.stat_mla_entries}</div></div>
+      <div class="stat tone-warn"><div class="value">${swaCount}</div><div class="label">${C.stat_swa_entries}</div></div>
+    </div>
+
+    <p class="secondary" style="margin-top:18px">${C.intro}</p>
+
+    <h3 style="margin-top:18px">${C.table_title}</h3>
+    <table>
+      <thead><tr>
+        <th>${C.table_head_spec}</th><th class="num">${C.table_head_block}</th><th class="num">${C.table_head_sw}</th>
+        <th class="num">${C.table_head_head}</th><th class="num">${C.table_head_cr}</th>
+        <th class="num">${C.table_head_page}</th><th class="num">${C.table_head_layers}</th><th>${C.table_head_source}</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+
+    <div class="callout">
+      <div class="callout-title">${C.callout_168_title}</div>
+      <p>${C.callout_168_body}</p>
+    </div>
+  `;
+}
+
+function renderStep2() {
+  const C = COPY.step2;
+  const mlaBuckets = INPUT_SPECS.filter((s) => s.kind === "MLA");
+  const swaBuckets = INPUT_SPECS.filter((s) => s.kind === "SWA");
+
+  return `
+    <p>${C.p1}</p>
+    <p class="secondary" style="margin-top:12px">${C.p_spec_two_kinds}</p>
+
+    <div class="stack-sm" style="margin-top:14px">
+      <div class="muted">${C.code_ref}</div>
+      <pre>for name, spec in kv_cache_spec.items():
+    if isinstance(spec, SlidingWindowMLASpec):
+        grouped_swa_mla_specs[(spec.block_size, spec.sliding_window)][name] = spec
+    elif isinstance(spec, MLAAttentionSpec):
+        mla_specs[name] = spec</pre>
+    </div>
+
+    <div class="grid grid-2" style="margin-top:18px">
+      <div class="card">
+        <div class="card-header">
+          <span>${C.mla_card_title}</span>
+          <span class="tag tone-info active">${C.mla_card_tag}</span>
+        </div>
+        <div class="card-body">
+          ${mlaBuckets.map(specBadge).join('<hr style="border:0;border-top:1px solid var(--stroke-3);margin:6px 0"/>')}
+          <div class="muted" style="margin-top:6px">${C.mla_card_footer}</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span>${C.swa_card_title}</span>
+          <span class="tag tone-warn active">${C.swa_card_tag}</span>
+        </div>
+        <div class="card-body">
+          ${swaBuckets.map((s) => `
+            <div class="stack-sm">
+              <div class="small strong">${C.key_prefix}(${s.block}, ${fmtSw(s.sw)})</div>
+              ${specBadge(s)}
+            </div>
+          `).join('<hr style="border:0;border-top:1px solid var(--stroke-3);margin:6px 0"/>')}
+        </div>
+      </div>
+    </div>
+
+    <div class="callout tone-warn" style="margin-top:18px">
+      <div class="callout-title">${C.callout_warn_title}</div>
+      <p>${C.callout_warn_body}</p>
+    </div>
+  `;
+}
+
+function renderStep3() {
+  const C = COPY.step3;
+  const cards = GROUPS_AFTER.map((g) => `
+    <div class="card">
+      <div class="card-header">
+        <span>group[${g.idx}]</span>
+        <span class="tag ${g.role === "FULL_MLA" ? "tone-info" : "tone-warn"} active">${g.role}</span>
+      </div>
+      <div class="card-body">
+        <div class="row" style="gap:18px">
+          <div class="stat" style="min-width:120px"><div class="value">${g.layers}</div><div class="label">${C.stat_layers_label}</div></div>
+          <div class="stat" style="min-width:120px"><div class="value">${g.pageSizes.length}</div><div class="label">${C.stat_num_pages_label}</div></div>
+        </div>
+        <div class="small secondary">block_sizes <code>[${g.blocks.join(", ")}]</code></div>
+        <div class="small secondary">sliding_windows <code>[${g.sws.map(fmtSw).join(", ")}]</code></div>
+        <div class="small secondary">compress_ratios <code>[${g.crs.join(", ")}]</code></div>
+        <div class="small secondary">page_sizes (B) <code>[${g.pageSizes.join(", ")}]</code></div>
+        <hr style="border:0;border-top:1px solid var(--stroke-3);margin:2px 0"/>
+        <div class="small">${g.contents}</div>
+      </div>
+    </div>
+  `).join("");
+
+  return `
+    <p>${C.p1}</p>
+
+    <div class="stack-sm" style="margin-top:14px">
+      <div class="muted">${C.code_ref}</div>
+      <pre>assert len(mla_specs) > 0
+mla_uniform_spec = UniformTypeKVCacheSpecs.from_specs(mla_specs)
+assert mla_uniform_spec is not None
+
+swa_uniform_specs: list[UniformTypeKVCacheSpecs] = []
+for spec_dict in grouped_swa_mla_specs.values():
+    uniform_spec = UniformTypeKVCacheSpecs.from_specs(spec_dict)
+    assert uniform_spec is not None
+    swa_uniform_specs.append(uniform_spec)
+
+return [mla_uniform_spec, *swa_uniform_specs]</pre>
+    </div>
+
+    <div class="callout" style="margin-top:18px">
+      <div class="callout-title">${C.callout_order_title}</div>
+      <p>${C.callout_order_body}</p>
+    </div>
+
+    <h3 style="margin-top:22px">${C.h_groups}</h3>
+    <p>${C.lead}</p>
+    <div class="grid grid-2" style="margin-top:10px">${cards}</div>
+
+    <div class="callout" style="margin-top:18px">
+      <div class="callout-title">${C.callout_inner_title}</div>
+      <p>${C.callout_inner_body}</p>
+    </div>
+  `;
+}
+
+function renderStep5() {
+  const C = COPY.step5;
+  return `
+    <p>${C.p1}</p>
+
+    <div class="callout" style="margin-top:14px">
+      <div class="callout-title">${C.callout_what_title}</div>
+      <p>${C.callout_what_body}</p>
+    </div>
+
+    <h3 style="margin-top:18px">${C.h_pad}</h3>
+    <p>${C.p_pad}</p>
+    <table>
+      <thead><tr>
+        <th>${C.th_group}</th>
+        <th>${C.th_source}</th>
+        <th class="num">${C.th_orig}</th>
+        <th class="num">${C.th_cand}</th>
+        <th class="num">${C.th_aligned}</th>
+        <th class="num">${C.th_waste}</th>
+      </tr></thead>
+      <tbody>${renderPaddingTable()}</tbody>
+    </table>
+
+    <h3 style="margin-top:18px">${C.h_tuple}</h3>
+    <p>${C.p_tuple}</p>
+    <table>
+      <thead><tr>
+        <th>${C.th_grp}</th>
+        <th class="num">${C.th_orig_t}</th>
+        <th class="num">${C.th_align_t}</th>
+        <th>${C.th_split}</th>
+        <th class="num">${C.th_sub}</th>
+      </tr></thead>
+      <tbody>${renderTupleTable()}</tbody>
+    </table>
+
+    <div class="callout" style="margin-top:18px">
+      <div class="callout-title">${C.callout_gcd_title}</div>
+      <p>${C.callout_gcd_body}</p>
+    </div>
+
+    <h3 style="margin-top:22px">${C.h_algo}</h3>
+    <p>${C.p_algo}</p>
+
+    <div class="stack-sm" style="margin-top:14px">
+      <div class="muted">${C.code_ref_algo}</div>
+      <pre>def _approximate_gcd(values, *, lower_bound=None):
+    # pad(d) = sum_i (ceil(x_i / d) * d - x_i)
+    min_d = max(1, lower_bound if lower_bound is not None else 1)
+    max_d = max(values)
+    if min_d > max_d:
+        return min_d
+
+    best_d = min_d
+    best_pad = None
+    for d in range(min_d, max_d + 1):
+        pad = sum((d - (x % d)) % d for x in values)
+        # 平手时偏好更大的 d
+        if best_pad is None or pad &lt; best_pad or (pad == best_pad and d > best_d):
+            best_pad = pad
+            best_d = d
+    return best_d</pre>
+    </div>
+
+    <h3 style="margin-top:18px">${C.h_algo_table}</h3>
+    <p>${C.p_algo_table_intro}</p>
+    <table>
+      <thead><tr>
+        <th class="num">${C.th_alg_d}</th>
+        <th class="num">${C.th_alg_pad0}</th>
+        <th class="num">${C.th_alg_pad1}</th>
+        <th class="num">${C.th_alg_pad2}</th>
+        <th class="num">${C.th_alg_pad3}</th>
+        <th class="num">${C.th_alg_sum}</th>
+        <th>${C.th_alg_note}</th>
+      </tr></thead>
+      <tbody>${C.algo_table_rows.map((r) => `
+        <tr style="${r.best ? 'background:var(--success-soft)' : ''}">
+          <td class="num"><strong>${r.d}</strong></td>
+          <td class="num">${r.pads[0]}</td>
+          <td class="num">${r.pads[1]}</td>
+          <td class="num">${r.pads[2]}</td>
+          <td class="num">${r.pads[3]}</td>
+          <td class="num">${r.best ? `<strong>${r.sum}</strong>` : r.sum}</td>
+          <td>${r.note}</td>
+        </tr>`).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderStep6() {
+  const C = COPY.step6;
+  const maxPage = Math.max(...FINAL_PAGE_SIZES);
+  const bars = BARS_CFG.map((b) => ({
+    label: b.label,
+    page: b.page,
+    ratio: b.page / maxPage,
+    tone: b.tone,
+  }));
+
+
+  const totalSlots = FINAL_GROUPS.reduce((s, g) => s + g.layers, 0);
+
+  return `
+    <div class="grid grid-3">
+      <div class="stat tone-info"><div class="value">${FINAL_PAGE_SIZES.length}</div><div class="label">${C.stat_page_kinds}</div></div>
+      <div class="stat"><div class="value">${FINAL_GROUPS.length}</div><div class="label">${C.stat_num_groups}</div></div>
+      <div class="stat"><div class="value">${totalSlots}</div><div class="label">${C.stat_total_slots}</div></div>
+    </div>
+
+    <h3 style="margin-top:18px">${C.h_bars}</h3>
+    <p class="secondary">${C.p_bars}</p>
+
+    <div class="bars">
+      ${bars.map((b) => `
+        <div class="bar-col">
+          <div class="bar-value">${fmtBytes(b.page)}</div>
+          <div class="bar tone-${b.tone}" style="height:${Math.max(10, Math.round(b.ratio * 130))}px"></div>
+          <div class="bar-label">${b.label}</div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderStepTensor() {
+  const C = COPY.step_tensor;
+  const numTuples = C.num_layer_tuples;
+  const numPs = FINAL_PAGE_SIZES.length;
+  const total = numTuples * numPs;
+  const empties = C.empty_grid.rows.reduce(
+    (acc, r) => acc + r.counts.filter((c) => c === 0).length,
+    0,
+  );
+  const kept = total - empties;
+
+  const inputRows = FINAL_GROUPS.map((g) => `
+    <tr>
+      <td><code>group[${g.idx}]</code></td>
+      <td class="num">${g.layers}</td>
+      <td class="num">${g.pageSizes.join(", ")}</td>
+      <td>${g.origin}</td>
+    </tr>
+  `).join("");
+
+  return `
+    <h3>${C.h_input}</h3>
+    <p>${C.p_input}</p>
+    <table style="margin-top:10px">
+      <thead><tr>
+        <th>${C.th_idx}</th><th class="num">${C.th_layers}</th><th class="num">${C.th_pages}</th><th>${C.th_origin}</th>
+      </tr></thead>
+      <tbody>${inputRows}</tbody>
+    </table>
+
+    <p style="margin-top:18px">${C.p1}</p>
+
+    <h3 style="margin-top:18px">${C.h_step1}</h3>
+    <p>${C.p_step1}</p>
+    <div class="stack-sm" style="margin-top:10px">
+      <div class="muted">${C.code_ref1}</div>
+      <pre>kv_cache_tensors: list[KVCacheTensor] = []
+for tuple_idx in range(num_layer_tuples):     # 22
+    for ps in page_sizes:                     # [1728, 8640, 37440]
+        shared_by: list[str] = []
+        for b in bucketed:                    # 5 个 KVCacheGroupSpec
+            bucket = b.get(ps)
+            if bucket is not None and tuple_idx &lt; len(bucket):
+                shared_by.append(bucket[tuple_idx])
+        kv_cache_tensors.append(
+            KVCacheTensor(size=ps * num_blocks, shared_by=shared_by)
+        )</pre>
+    </div>
+
+    <h3 style="margin-top:18px">${C.h_step2}</h3>
+    <p>${C.p_step2}</p>
+    <div class="stack-sm" style="margin-top:10px">
+      <div class="muted">${C.code_ref2}</div>
+      <pre>def _allocate_kv_cache(kv_cache_config, device):
+    kv_cache_raw_tensors: dict[str, torch.Tensor] = {}
+    for kv_cache_tensor in kv_cache_config.kv_cache_tensors:
+        tensor = torch.zeros(kv_cache_tensor.size,
+                             dtype=torch.int8, device=device)
+        for layer_name in kv_cache_tensor.shared_by:
+            kv_cache_raw_tensors[layer_name] = tensor
+    ...
+    return kv_cache_raw_tensors</pre>
+    </div>
+
+    <h3 style="margin-top:22px">${C.h_count}</h3>
+    <p>${C.p_count}</p>
+    <div class="grid grid-4" style="margin-top:10px">
+      <div class="stat"><div class="value">${numTuples}</div><div class="label">${C.stat_num_tuples_label}</div></div>
+      <div class="stat"><div class="value">${numPs}</div><div class="label">${C.stat_num_ps_label}</div></div>
+      <div class="stat tone-info"><div class="value">${total}</div><div class="label">${C.stat_total_label}</div></div>
+      <div class="stat tone-success"><div class="value">${kept}</div><div class="label">${C.stat_kept_label}</div></div>
+    </div>
+
+    <h3 style="margin-top:22px">${C.h_empty}</h3>
+    <p>${C.p_empty}</p>
+
+    ${renderEmptyGrid(C.empty_grid)}
+  `;
+}
+
+function renderEmptyGrid(G) {
+  const cellStyle = (count) => {
+    if (count === 0) {
+      return "background:rgba(213,101,101,0.65);border:1px solid var(--danger);color:#fff;font-weight:600;";
+    }
+    if (count === 1) {
+      return "background:var(--bg-elev);border:1px solid var(--stroke-3);color:var(--fg-3);";
+    }
+    if (count === 2) {
+      return "background:rgba(89,156,231,0.35);border:1px solid var(--info);color:var(--fg);";
+    }
+    return "background:rgba(95,184,138,0.45);border:1px solid var(--success);color:var(--fg);";
+  };
+
+  const headerCells = Array.from({ length: 22 }, (_, i) => `
+    <div style="text-align:center;font-size:10.5px;color:var(--fg-3);font-variant-numeric:tabular-nums;">${i}</div>
+  `).join("");
+
+  const rowsHtml = G.rows.map((r) => `
+    <div style="display:grid;grid-template-columns:78px repeat(22, minmax(0, 1fr));gap:3px;align-items:center;margin-top:3px">
+      <div style="text-align:right;font-size:12px;color:var(--fg-2);padding-right:6px">
+        <code>${r.ps}</code>
+      </div>
+      ${r.counts.map((c, i) => `
+        <div title="tuple_idx=${i} · ps=${r.ps} · shared_by=${c}"
+             style="aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:11px;font-variant-numeric:tabular-nums;${cellStyle(c)}">${c}</div>
+      `).join("")}
+    </div>
+  `).join("");
+
+  const legendHtml = G.legend.map((l) => {
+    const swatchStyle = (() => {
+      if (l.tone === "danger") return "background:rgba(213,101,101,0.65);border:1px solid var(--danger);";
+      if (l.tone === "info") return "background:rgba(89,156,231,0.35);border:1px solid var(--info);";
+      if (l.tone === "success") return "background:rgba(95,184,138,0.45);border:1px solid var(--success);";
+      return "background:var(--bg-elev);border:1px solid var(--stroke-3);";
+    })();
+    return `
+      <div style="display:inline-flex;align-items:center;gap:6px;margin-right:14px;font-size:12px;color:var(--fg-2)">
+        <span style="display:inline-block;width:14px;height:14px;border-radius:3px;${swatchStyle}"></span>
+        <span>${l.label}</span>
+      </div>`;
+  }).join("");
+
+  return `
+    <p class="secondary" style="margin-top:10px">${G.intro_html}</p>
+
+    <div class="card" style="margin-top:12px">
+      <div class="card-body" style="overflow-x:auto">
+        <div style="min-width:640px">
+          <div style="display:grid;grid-template-columns:78px repeat(22, minmax(0, 1fr));gap:3px;align-items:end">
+            <div style="font-size:11px;color:var(--fg-3);text-align:right;padding-right:6px">
+              page \\ tuple_idx
+            </div>
+            ${headerCells}
+          </div>
+          ${rowsHtml}
+          <div style="margin-top:14px;display:flex;flex-wrap:wrap">${legendHtml}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+const RENDERERS = [renderHighLevel, renderStep0, renderStep2, renderStep3, renderStep5, renderStepTensor, renderStep6];
+
+function readStepFromHash() {
+  const m = location.hash.match(/^#step=(\d+)$/);
+  if (!m) return 0;
+  const n = parseInt(m[1], 10);
+  return Math.max(0, Math.min(STEPS.length - 1, n));
+}
+function persistStep(n) {
+  try { localStorage.setItem("dsk-v4-kv-step", String(n)); } catch (e) {}
+  const newHash = `#step=${n}`;
+  if (location.hash !== newHash) history.replaceState(null, "", newHash);
+}
+function initialStep() {
+  if (location.hash) return readStepFromHash();
+  try {
+    const v = localStorage.getItem("dsk-v4-kv-step");
+    if (v !== null) return Math.max(0, Math.min(STEPS.length - 1, parseInt(v, 10)));
+  } catch (e) {}
+  return 0;
+}
+
+let current = initialStep();
+
+function render() {
+  const nav = document.getElementById("stepNav");
+  nav.innerHTML = "";
+  STEPS.forEach((s) => {
+    const btn = document.createElement("button");
+    btn.className = "pill" + (s.id === current ? " active tone-info" : "");
+    btn.textContent = `${s.id}. ${s.title}`;
+    btn.onclick = () => setStep(s.id);
+    nav.appendChild(btn);
+  });
+
+  const header = document.getElementById("stepHeader");
+  const s = STEPS[current];
+  header.innerHTML = `
+    <div class="eyebrow">第 ${s.id} 步 / 共 ${STEPS.length - 1} 步</div>
+    <h2>${s.title}</h2>
+    <p class="subtitle">${s.subtitle}</p>
+  `;
+
+  const body = document.getElementById("stepBody");
+  body.innerHTML = RENDERERS[current]();
+
+  const prevBtn = document.getElementById("prevBtn");
+  const nextBtn = document.getElementById("nextBtn");
+  prevBtn.disabled = current === 0;
+  nextBtn.disabled = current === STEPS.length - 1;
+  prevBtn.classList.toggle("active", false);
+  nextBtn.classList.toggle("active", current < STEPS.length - 1);
+  document.getElementById("stepCounter").textContent =
+    `${current + 1} / ${STEPS.length}`;
+}
+
+function setStep(n) {
+  current = Math.max(0, Math.min(STEPS.length - 1, n));
+  persistStep(current);
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+document.getElementById("prevBtn").onclick = () => setStep(current - 1);
+document.getElementById("nextBtn").onclick = () => setStep(current + 1);
+
+window.addEventListener("keydown", (e) => {
+  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+  if (e.key === "ArrowLeft") setStep(current - 1);
+  if (e.key === "ArrowRight") setStep(current + 1);
+});
+
+window.addEventListener("hashchange", () => {
+  current = readStepFromHash();
+  render();
+});
+
+render();
+
+</script>
+</body>
+</html>
